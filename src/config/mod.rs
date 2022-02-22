@@ -11,7 +11,8 @@ const CONFIG_FILE_PATH_PREFIX: &str = "./config/";
 
 lazy_static! {
     /// If `AWS_SECRET_NAME` detected in runtime `ENV`, config will be
-    /// parsed using AWS Secret. Otherwise, config is file-based.
+    /// parsed using AWS Secret.
+    /// Otherwise, read config file.
     pub static ref C: KVConfig = {
         if !std::env::var("AWS_SECRET_NAME").unwrap_or_default().is_empty() {
             from_aws_secret().unwrap()
@@ -59,6 +60,7 @@ impl Default for ConfigCategory {
     }
 }
 
+/// Fetch and parse runtime ENV.
 pub fn app_env() -> ENV {
     std::env::var("KV_SERVER_ENV")
         .unwrap_or_else(|_| "development".into())

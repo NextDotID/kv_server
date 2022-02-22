@@ -12,7 +12,7 @@ struct HelloResponse {
 pub async fn controller(req: Request) -> Result<Response<Body>, Error> {
     let params = req.query_string_parameters();
     let target = params
-        .get("name")
+        .first("name")
         .ok_or(Error::ParamMissing("name".to_string()))?;
 
     json_response(
