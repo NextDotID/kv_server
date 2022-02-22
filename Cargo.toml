@@ -1,0 +1,20 @@
+[package]
+name = "aws_lambda_rust_template"
+version = "0.1.0"
+edition = "2021"
+autobins = false
+
+[[bin]]
+name = "bootstrap"
+path = "examples/lambda.rs"
+
+[dependencies]
+log = "0.4"
+
+lambda_runtime = "0.4"
+# wait for (maybe) 0.5.0
+lambda_http = { git = "https://github.com/awslabs/aws-lambda-rust-runtime", branch = "master" }
+
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

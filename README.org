@@ -1,0 +1,104 @@
+* AWS Lambda template for Rust
+:PROPERTIES:
+:ID:       1006a34f-ab4b-4083-8146-b8e5d32296a7
+:END:
+
+** How to use
+:PROPERTIES:
+:ID:       643cbc6e-29d0-49c6-a371-73cf4fa3408b
+:END:
+
+*** Preparation
+:PROPERTIES:
+:ID:       8aafaeea-a060-4c32-b019-57585d422880
+:END:
+
+See [[https://github.com/cross-rs/cross][cross-rs/cross]] for installation guide.
+
+#+begin_quote
+In brief:
+
+1. =docker= should be prepared.
+2. =cargo install cross=
+#+end_quote
+
+*** Compile
+:PROPERTIES:
+:ID:       a6c39eba-7d1c-4f20-ac30-1cc9200c8631
+:END:
+
+#+begin_src sh
+  make lambda-build
+#+end_src
+
+*** Create lambda function
+:PROPERTIES:
+:ID:       0fbf06c4-5583-44ac-ba1e-64cd63c91a65
+:END:
+
+Create a file named `lambda.mk` with these content:
+
+#+begin_src makefile
+  # Modify with your choice.
+  function-name=my_function_name
+  # Create a role for this function runtime on AWS beforehead.
+  function-role=arn:aws:iam::xxxx
+#+end_src
+
+Then,
+
+#+begin_src sh
+  make lambda-create
+#+end_src
+
+*** Upload / Update function
+:PROPERTIES:
+:ID:       d424191c-2477-4487-9943-6a7f9a78c790
+:END:
+
+#+begin_src sh
+  make lambda-update
+#+end_src
+
+*** Create API Gateway
+:PROPERTIES:
+:ID:       977a7ffc-1d0f-4712-bcbd-4c273b7383d7
+:END:
+
+Refer to [[https://github.com/akrylysov/algnhsa][akrylysov/algnhsa]] -> =Setting up API Gateway= chapter.
+
+If needed, create a =Stage= for this API.
+
+** [0/1] TODOs
+:PROPERTIES:
+:ID:       a8f496f0-5c75-478d-8dfe-8eb8a544a30a
+:END:
+
+*** TODO Intergrate a "true" HTTP server w/ full router support
+:PROPERTIES:
+:ID:       c8d3330d-da52-487b-b670-e1b987df0662
+:END:
+
+Since =master= branch of =lambda_http::Request= implements
+=tower::Service= trait, we should use something like this to
+dramatically decrease complexity of current code.
+
+#+begin_src rust
+  // Copied from https://github.com/awslabs/aws-lambda-rust-runtime/issues/404
+  use tower::Service;
+  use lambda_http::{Request, ServiceExt};
+
+  #[derive(Default)]
+  struct MyHandler;
+
+  //   vvvvvvvvvvvvvvvv HERE
+  impl Service<Request> for MyHandler {
+      // skipped
+  }
+
+  #[tokio::main]
+  async fn main() -> Result<(), Error> {
+      // Use lambda_http::run to wrap the Service
+      lambda_http::run(MyHandler::default()).await
+  }
+#+end_src
