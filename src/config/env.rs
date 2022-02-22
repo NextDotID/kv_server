@@ -11,7 +11,9 @@ pub enum ENV {
 }
 
 impl Default for ENV {
-    fn default() -> Self { Self::Development }
+    fn default() -> Self {
+        Self::Development
+    }
 }
 
 impl fmt::Display for ENV {

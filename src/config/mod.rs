@@ -1,8 +1,8 @@
 mod env;
 
+use crate::error::Error;
 use config::Config;
 use serde::Deserialize;
-use crate::error::Error;
 
 use self::env::ENV;
 
@@ -44,7 +44,7 @@ pub struct ConfigWeb {
 }
 
 #[derive(Clone, Deserialize, Default)]
-pub struct ConfigProofService{
+pub struct ConfigProofService {
     pub url: String,
 }
 
@@ -54,7 +54,9 @@ pub enum ConfigCategory {
     AWSSecret,
 }
 impl Default for ConfigCategory {
-    fn default() -> Self { Self::File }
+    fn default() -> Self {
+        Self::File
+    }
 }
 
 pub fn app_env() -> ENV {
@@ -69,7 +71,10 @@ pub fn parse() -> Result<KVConfig, Error> {
         // Default
         .add_source(config::File::with_name(CONFIG_FILE_PATH))
         // app-env-based config
-        .add_source(config::File::with_name(&format!("{}{}.toml", CONFIG_FILE_PATH_PREFIX, app_env())).required(false))
+        .add_source(
+            config::File::with_name(&format!("{}{}.toml", CONFIG_FILE_PATH_PREFIX, app_env()))
+                .required(false),
+        )
         // runtime-ENV-based config
         .add_source(config::Environment::with_prefix("KV").separator("_"))
         .build()?;

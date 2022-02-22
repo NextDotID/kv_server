@@ -1,5 +1,5 @@
 use crate::error::Error;
-use lambda_http::{Request, Response, Body, http::StatusCode};
+use lambda_http::{http::StatusCode, Body, Request, Response};
 use serde::{Deserialize, Serialize};
 
 use super::json_response;

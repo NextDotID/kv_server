@@ -1,5 +1,5 @@
-use thiserror::Error;
 use lambda_http::http::StatusCode;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -19,7 +19,7 @@ pub enum Error {
         source: lambda_http::http::Error,
     },
     #[error("Config error: {source:?}")]
-    ConfigError{
+    ConfigError {
         #[from]
         source: config::ConfigError,
     },
