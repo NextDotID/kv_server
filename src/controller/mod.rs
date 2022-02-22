@@ -7,11 +7,10 @@ use lambda_http::{Request, Response, IntoResponse, Error as LambdaError, http::{
 use log::info;
 use serde::{Serialize, Deserialize};
 
-use crate::error::{Error, ErrorCategory};
+use crate::error::Error;
 
 #[derive(Debug, Serialize)]
 struct ErrorResponse {
-    pub module: String,
     pub message: String,
 }
 
@@ -44,26 +43,14 @@ fn json_parse_body<T>(req: &Request) -> Result<T, Error>
 where for<'de> T: Deserialize<'de>
 {
     match req.body() {
-        Body::Empty => Err(Error {
-            category: ErrorCategory::BadRequest,
-            module: "merkle_upload".into(),
-            description: "no body provided".into(),
-        }),
+        Body::Empty => Err(Error::BodyMissing),
         Body::Text(text) => {
             serde_json::from_str(text.as_str())
-                .map_err(|_| Error {
-                    category: ErrorCategory::BadRequest,
-                    module: "merkle_upload".into(),
-                    description: "JSON parse error".into(),
-                })
+                .map_err(|e| e.into())
         },
         Body::Binary(bin) => {
             serde_json::from_slice(bin.as_slice())
-                .map_err(|_| Error {
-                    category: ErrorCategory::BadRequest,
-                    module: "merkle_upload".into(),
-                    description: "JSON parse error".into(),
-                })
+                .map_err(|e| e.into())
         },
     }
 }
@@ -71,11 +58,7 @@ where for<'de> T: Deserialize<'de>
 fn json_response<T>(status: StatusCode, resp: &T) -> Result<Response<Body>, Error>
 where T: Serialize
 {
-    let body = serde_json::to_string(resp).map_err(|_| Error {
-        category: ErrorCategory::Internal,
-        module: "json_response".into(),
-        description: "error when seriailzing JSON response".into(),
-    })?;
+    let body = serde_json::to_string(resp).unwrap();
 
     Response::builder()
         .status(status)
@@ -84,17 +67,12 @@ where T: Serialize
         .header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token")
         .header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
         .body(body.into())
-        .map_err(|_| Error {
-            category: ErrorCategory::Internal,
-            module: "json_response".into(),
-            description: "failed to render response".into(),
-        })
+        .map_err(|e| e.into())
 }
 
 fn error_response(err: Error) -> Response<Body> {
     let resp = ErrorResponse {
-        module: err.module.clone(),
-        message: err.description.clone(),
+        message: err.to_string(),
     };
     let body: String = serde_json::to_string(&resp).unwrap();
 
