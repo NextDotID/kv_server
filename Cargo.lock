@@ -475,6 +475,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "http",
+ "hyper",
  "lambda_http",
  "lambda_runtime",
  "lazy_static",

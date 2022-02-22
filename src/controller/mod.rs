@@ -1,5 +1,5 @@
-mod hello;
-mod upload;
+pub mod hello;
+pub mod upload;
 
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
