@@ -1,5 +1,8 @@
-use crate::{error::Error, controller::lambda::json_response};
-use lambda_http::{http::StatusCode, Body, Request, RequestExt, Response};
+use crate::{
+    controller::{json_response, query_parse, Request, Response},
+    error::Error,
+};
+use http::StatusCode;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -7,10 +10,10 @@ struct HelloResponse {
     pub hello: String,
 }
 
-pub async fn controller(req: Request) -> Result<Response<Body>, Error> {
-    let params = req.query_string_parameters();
+pub async fn controller(req: Request) -> Result<Response, Error> {
+    let params = query_parse(req);
     let target = params
-        .first("name")
+        .get("name")
         .ok_or(Error::ParamMissing("name".to_string()))?;
 
     json_response(
