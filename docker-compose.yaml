@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  pg:
+    image: postgres:14-alpine
+    ports:
+    - 127.0.0.1:5440:5432
+    volumes:
+    - pg_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: kv_server
+      POSTGRES_PASSWORD: kv_server
+      POSTGRES_DB: kv_server_development
+
+volumes:
+  pg_data: {}

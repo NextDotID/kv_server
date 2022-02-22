@@ -1,0 +1,13 @@
+[db]
+host = "127.0.0.1"
+port = 5440
+username = "kv_server"
+password = "kv_server"
+db = "kv_server_development"
+
+[web]
+listen = "127.0.0.1"
+port = 3721
+
+[proof_service]
+url = "https://proof-service.nextnext.id/"

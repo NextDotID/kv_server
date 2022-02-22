@@ -17,9 +17,12 @@ pub enum Error {
     HttpError {
         #[from]
         source: lambda_http::http::Error,
-    }
-    // #[error("")]
-
+    },
+    #[error("Config error: {source:?}")]
+    ConfigError{
+        #[from]
+        source: config::ConfigError,
+    },
 }
 
 impl Error {
@@ -29,12 +32,7 @@ impl Error {
             Error::BodyMissing => StatusCode::BAD_REQUEST,
             Error::ParseError { source: _ } => StatusCode::BAD_REQUEST,
             Error::HttpError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::ConfigError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
         }
-        // match self.category {
-        //     ErrorCategory::Internal => StatusCode::INTERNAL_SERVER_ERROR,
-        //     ErrorCategory::BadRequest => StatusCode::BAD_REQUEST,
-        //     ErrorCategory::NotFound => StatusCode::NOT_FOUND,
-        //     ErrorCategory::Forbidden => StatusCode::FORBIDDEN,
-        // }
     }
 }

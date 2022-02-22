@@ -1,2 +1,5 @@
 /lambda.mk
 /target
+
+/config/*.toml
+!/config/main_sample.toml

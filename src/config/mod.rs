@@ -1,32 +1,83 @@
-use serde::Deserialize;
+mod env;
 
+use config::Config;
+use serde::Deserialize;
 use crate::error::Error;
 
-#[derive(Clone, Deserialize, Default)]
-pub struct Config {
-    db: ConfigDB,
-    web: ConfigWeb,
+use self::env::ENV;
+
+const CONFIG_FILE_PATH: &str = "./config/main";
+const CONFIG_FILE_PATH_PREFIX: &str = "./config/";
+
+lazy_static! {
+    /// If `AWS_SECRET_NAME` detected in runtime `ENV`, config will be
+    /// parsed using AWS Secret. Otherwise, config is file-based.
+    pub static ref C: KVConfig = {
+        if !std::env::var("AWS_SECRET_NAME").unwrap_or_default().is_empty() {
+            from_aws_secret().unwrap()
+        } else {
+            parse().unwrap()
+        }
+    };
 }
 
 #[derive(Clone, Deserialize, Default)]
-struct ConfigDB {
-    host: String,
-    port: u16,
-    username: String,
-    password: String,
-    db: String,
+pub struct KVConfig {
+    pub db: ConfigDB,
+    pub web: ConfigWeb,
+    pub proof_service: ConfigProofService,
 }
 
 #[derive(Clone, Deserialize, Default)]
-struct ConfigWeb {
-    listen: String,
-    port: u16,
+pub struct ConfigDB {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+    pub db: String,
 }
 
-fn from_env() -> Result<Config, Error> {
-    todo!()
+#[derive(Clone, Deserialize, Default)]
+pub struct ConfigWeb {
+    pub listen: String,
+    pub port: u16,
 }
 
-fn from_aws_secret() -> Result<Config, Error> {
+#[derive(Clone, Deserialize, Default)]
+pub struct ConfigProofService{
+    pub url: String,
+}
+
+#[derive(Clone, Deserialize)]
+pub enum ConfigCategory {
+    File,
+    AWSSecret,
+}
+impl Default for ConfigCategory {
+    fn default() -> Self { Self::File }
+}
+
+pub fn app_env() -> ENV {
+    std::env::var("KV_SERVER_ENV")
+        .unwrap_or_else(|_| "development".into())
+        .into()
+}
+
+/// Parse config from local file or ENV.
+pub fn parse() -> Result<KVConfig, Error> {
+    let s = Config::builder()
+        // Default
+        .add_source(config::File::with_name(CONFIG_FILE_PATH))
+        // app-env-based config
+        .add_source(config::File::with_name(&format!("{}{}.toml", CONFIG_FILE_PATH_PREFIX, app_env())).required(false))
+        // runtime-ENV-based config
+        .add_source(config::Environment::with_prefix("KV").separator("_"))
+        .build()?;
+
+    s.try_deserialize().map_err(|e| e.into())
+}
+
+/// `AWS_SECRET_NAME` and `AWS_SECRET_REGION` is needed.
+pub fn from_aws_secret() -> Result<KVConfig, Error> {
     todo!()
 }

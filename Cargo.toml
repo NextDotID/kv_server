@@ -14,6 +14,8 @@ name = "bootstrap"
 path = "examples/lambda.rs"
 
 [dependencies]
+config = "0.12"
+lazy_static = "1.4"
 log = "0.4"
 thiserror = "1.0"
 

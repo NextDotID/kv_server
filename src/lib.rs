@@ -1,4 +1,7 @@
+#[macro_use]
+extern crate lazy_static;
+
 pub mod controller;
-mod error;
-mod model;
-mod config;
+pub mod error;
+pub mod model;
+pub mod config;
