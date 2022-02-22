@@ -1,5 +1,5 @@
 use lambda_http::{service_fn, Error as LambdaError};
-use kv_server::controller::entrypoint;
+use kv_server::controller::lambda::entrypoint;
 
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {

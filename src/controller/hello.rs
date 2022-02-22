@@ -1,8 +1,6 @@
-use crate::error::Error;
+use crate::{error::Error, controller::lambda::json_response};
 use lambda_http::{http::StatusCode, Body, Request, RequestExt, Response};
 use serde::Serialize;
-
-use super::json_response;
 
 #[derive(Serialize)]
 struct HelloResponse {
