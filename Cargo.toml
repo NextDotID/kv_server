@@ -19,8 +19,11 @@ lazy_static = "1.4"
 log = "0.4"
 thiserror = "1.0"
 
+http = "0.2.6"
+url = "2.2"
 lambda_runtime = "0.5.0"
 lambda_http = "0.5.0"
+hyper = "0.14.17"
 
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }

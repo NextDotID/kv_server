@@ -1,8 +1,10 @@
-use crate::error::Error;
-use lambda_http::{http::StatusCode, Body, Request, Response};
+use http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use super::json_response;
+use crate::{
+    controller::{json_parse_body, json_response, Request, Response},
+    error::Error,
+};
 
 #[derive(Debug, Clone, Deserialize)]
 struct UploadRequest {
@@ -14,8 +16,8 @@ struct UploadResponse {
     pub response: String,
 }
 
-pub async fn controller(req: Request) -> Result<Response<Body>, Error> {
-    let body: UploadRequest = super::json_parse_body(&req)?;
+pub async fn controller(req: Request) -> Result<Response, Error> {
+    let body: UploadRequest = json_parse_body(&req)?;
     let response = UploadResponse {
         response: format!("Hello, {}!", body.name),
     };
