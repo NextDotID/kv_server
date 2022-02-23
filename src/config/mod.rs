@@ -88,3 +88,16 @@ pub fn parse() -> Result<KVConfig, Error> {
 pub fn from_aws_secret() -> Result<KVConfig, Error> {
     todo!()
 }
+
+impl KVConfig {
+    pub fn database_url(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.db.username,
+            self.db.password,
+            self.db.host,
+            self.db.port,
+            self.db.db,
+        )
+    }
+}
