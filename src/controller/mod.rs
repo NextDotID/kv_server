@@ -100,13 +100,3 @@ pub fn error_response(err: Error) -> Response {
         .body(body)
         .expect("failed to render response")
 }
-
-fn test_convert_request(req: Request) -> (http::request::Parts, String) {
-    let (parts, body) = req.into_parts();
-}
-
-fn test_convert_response(body: String) -> Response<Body> {
-    Response::builder()
-        .body(body.into())
-        .unwrap()
-}
