@@ -3,7 +3,10 @@ use std::future::Future;
 use std::net::SocketAddr;
 
 use kv_server::{config::C, error::Error};
-use kv_server::controller::{hello, upload, Body, Response, Request, error_response};
+use kv_server::controller::{
+    healthz, upload,
+    Body, Response, Request, error_response
+};
 use hyper::{
     Method,
     Server,
@@ -19,8 +22,10 @@ use log::info;
 #[tokio::main]
 async fn main() {
     let config = C.clone(); // TODO
+    let addr: SocketAddr = format!("{}:{}", config.web.listen, config.web.port)
+        .parse()
+        .expect("Unable to parse web listen address");
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3721));
     let make_svc = make_service_fn(|_conn| async {
         Ok::<_, Infallible>(service_fn(entrypoint))
     });
@@ -39,7 +44,7 @@ async fn entrypoint(req: HyperRequest<HyperBody>) -> Result<HyperResponse<HyperB
     );
 
     Ok(match (req.method(), req.uri().path()) {
-        (&Method::GET, "/hello") => parse(req, hello::controller).await,
+        (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
         (&Method::POST, "/upload") => parse(req, upload::controller).await,
 
         _ => HyperResponse::builder()

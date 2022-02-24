@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::controller::{
-    hello, upload, error_response,
+    healthz, upload, error_response,
     Request as OurRequest,
     Response as OurResponse,
     Body as OurBody,
@@ -44,7 +44,7 @@ pub async fn entrypoint(req: LambdaRequest) -> Result<impl IntoResponse, LambdaE
     );
 
     Ok(match (req.method(), req.uri().path()) {
-        (&Method::GET, "/hello") => parse(req, hello::controller).await,
+        (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
         (&Method::POST, "/upload") => parse(req, upload::controller).await,
 
         _ => LambdaResponse::builder()

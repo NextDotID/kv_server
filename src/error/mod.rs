@@ -23,6 +23,11 @@ pub enum Error {
         #[from]
         source: config::ConfigError,
     },
+    #[error("Database error: {source:?}")]
+    DatabaseError {
+        #[from]
+        source: diesel::result::Error,
+    }
 }
 
 impl Error {
@@ -33,6 +38,7 @@ impl Error {
             Error::ParseError { source: _ } => StatusCode::BAD_REQUEST,
             Error::HttpError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::ConfigError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::DatabaseError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

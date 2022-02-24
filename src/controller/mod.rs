@@ -1,4 +1,4 @@
-pub mod hello;
+pub mod healthz;
 pub mod upload;
 
 use http::StatusCode;
