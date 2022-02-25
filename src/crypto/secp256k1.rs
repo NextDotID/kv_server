@@ -1,5 +1,5 @@
-use crate::{error::Error, crypto::util::hash_keccak256};
-use libsecp256k1::{Message, PublicKey, SecretKey, Signature, RecoveryId};
+use crate::{crypto::util::hash_keccak256, error::Error};
+use libsecp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 use rand::rngs;
 
 pub struct Secp256k1KeyPair {
@@ -39,7 +39,7 @@ impl Secp256k1KeyPair {
     /// # use hex_literal::hex;
     /// # use libsecp256k1::{SecretKey, PublicKey};
     /// #
-    /// let sign_payload = "Test123".to_string();
+    /// let sign_payload = "Test123!".to_string();
     /// # let secret_key = SecretKey::parse(&hex!("b5466835b2228927d8dc1194cf8e6f52ba4b4cdb49cc954f31565d0c30fd44c8")).unwrap();
     /// # let expected = hex!("bc14fed2a5ae2c5c7e793f2a45f4f9aad84c7caa56139ee4a802806c5bb1a9cf4baa0e2df71bf3d0a943fbfb177afc1bd9c17995a6f409928548f3318d3f9b6300");
     /// # let keypair = Secp256k1KeyPair {
@@ -68,7 +68,7 @@ impl Secp256k1KeyPair {
         result.extend_from_slice(&signature.s.b32());
         result.extend_from_slice(&[recovery_id.serialize()]);
         if result.len() != 65 {
-            return Err(Error::CryptoError{
+            return Err(Error::CryptoError {
                 source: libsecp256k1::Error::InvalidInputLength,
             });
         }
@@ -120,14 +120,27 @@ impl Secp256k1KeyPair {
     /// let recovered_pubkey = Secp256k1KeyPair::recover_from_personal_signature(&sig, &sign_payload).unwrap();
     /// assert_eq!(recovered_pubkey, public_key);
     /// ```
-    pub fn recover_from_personal_signature(sig_r_s_recovery: &Vec<u8>, plain_payload: &str) -> Result<PublicKey, Error> {
-        let personal_payload = format!("\x19Ethereum Signed Message:\n{}{}", plain_payload.len(), plain_payload);
+    pub fn recover_from_personal_signature(
+        sig_r_s_recovery: &Vec<u8>,
+        plain_payload: &str,
+    ) -> Result<PublicKey, Error> {
+        let personal_payload = format!(
+            "\x19Ethereum Signed Message:\n{}{}",
+            plain_payload.len(),
+            plain_payload
+        );
         let digest = hash_keccak256(&personal_payload);
 
-        let recovery_id = sig_r_s_recovery.get(64)
-            .ok_or_else(|| Error::CryptoError{ source: libsecp256k1::Error::InvalidInputLength })?;
-        let signature = Signature::parse_standard_slice(&sig_r_s_recovery.as_slice()[..64]).map_err(|e| Error::from(e))?;
-        let pubkey = libsecp256k1::recover(&Message::parse(&digest), &signature, &RecoveryId::parse(*recovery_id).unwrap())?;
+        let recovery_id = sig_r_s_recovery.get(64).ok_or_else(|| Error::CryptoError {
+            source: libsecp256k1::Error::InvalidInputLength,
+        })?;
+        let signature = Signature::parse_standard_slice(&sig_r_s_recovery.as_slice()[..64])
+            .map_err(|e| Error::from(e))?;
+        let pubkey = libsecp256k1::recover(
+            &Message::parse(&digest),
+            &signature,
+            &RecoveryId::parse(*recovery_id).unwrap(),
+        )?;
 
         Ok(pubkey)
     }
