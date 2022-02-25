@@ -17,6 +17,7 @@ path = "examples/lambda.rs"
 config = "0.12"
 lazy_static = "1.4"
 log = "0.4"
+env_logger = "0.9"
 thiserror = "1.0"
 
 http = "0.2.6"
