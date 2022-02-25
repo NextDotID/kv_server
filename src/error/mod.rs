@@ -27,7 +27,17 @@ pub enum Error {
     DatabaseError {
         #[from]
         source: diesel::result::Error,
-    }
+    },
+    #[error("Crypto error: {source:?}")]
+    CryptoError{
+        #[from]
+        source: libsecp256k1::Error,
+    },
+    // #[error("Crypto error: {source: ?}")]
+    // CryptoCoreError {
+    //     #[from]
+    //     source: libsecp256k1::Error,
+    // }
 }
 
 impl Error {
@@ -39,6 +49,7 @@ impl Error {
             Error::HttpError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::ConfigError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::DatabaseError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::CryptoError { source: _ } => StatusCode::BAD_REQUEST,
         }
     }
 }
