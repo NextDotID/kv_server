@@ -3,6 +3,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    // general
+    #[error("{0}")]
+    General(String, StatusCode),
     // http
     #[error("Param missing: {0}")]
     ParamMissing(String),
@@ -39,6 +42,11 @@ pub enum Error {
     HexError {
         #[from]
         source: hex::FromHexError,
+    },
+    #[error("Error when calling remote server: {source:?}")]
+    HttpClientError {
+        #[from]
+        source: hyper::Error,
     }
     // #[error("Crypto error: {source: ?}")]
     // CryptoCoreError {
@@ -50,6 +58,7 @@ pub enum Error {
 impl Error {
     pub fn http_status(&self) -> StatusCode {
         match self {
+            Error::General(_, status) => *status,
             Error::ParamMissing(_) => StatusCode::BAD_REQUEST,
             Error::ParamError(_) => StatusCode::BAD_REQUEST,
             Error::BodyMissing => StatusCode::BAD_REQUEST,
@@ -59,6 +68,7 @@ impl Error {
             Error::DatabaseError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::CryptoError { source: _ } => StatusCode::BAD_REQUEST,
             Error::HexError { source: _ } => StatusCode::BAD_REQUEST,
+            Error::HttpClientError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

@@ -24,7 +24,8 @@ http = "0.2.6"
 url = "2.2"
 lambda_runtime = "0.5.0"
 lambda_http = "0.5.0"
-hyper = "0.14.17"
+hyper = { version = "0.14.17", features = ["full"] }
+hyper-tls = "*"
 
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }

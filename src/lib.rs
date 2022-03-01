@@ -11,3 +11,4 @@ pub mod model;
 mod schema;
 pub mod crypto;
 pub mod util;
+pub mod proof_client;

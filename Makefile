@@ -28,3 +28,6 @@ lambda-update: lambda-pack
 
 lambda-delete:
 	@aws lambda delete-function --function-name ${func}
+
+test:
+	@RUST_BACKTRACE=1 RUST_LOG=debug cargo test -- --nocapture
