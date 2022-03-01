@@ -5,5 +5,6 @@ table! {
         platform -> Varchar,
         identity -> Varchar,
         content -> Jsonb,
+        persona -> Bytea,
     }
 }

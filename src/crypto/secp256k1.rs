@@ -1,10 +1,27 @@
-use crate::{crypto::util::hash_keccak256, error::Error};
+use crate::{crypto::util::{hash_keccak256, compress_public_key}, error::Error};
 use libsecp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 use rand::rngs;
 
+/// Supports non-SecretKey usage.
 pub struct Secp256k1KeyPair {
     pub public_key: PublicKey,
-    pub secret_key: SecretKey,
+    pub secret_key: Option<SecretKey>,
+}
+
+impl std::fmt::Debug for Secp256k1KeyPair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.secret_key {
+            Some(_) => f
+                .debug_struct("Secp256k1KeyPair")
+                .field("public_key", &compress_public_key(&self.public_key))
+                .field("secret_key", &"OMIT".to_string())
+                .finish(),
+            None => f
+                .debug_struct("Secp256k1KeyPair")
+                .field("public_key", &self.public_key)
+                .finish(),
+        }
+    }
 }
 
 impl Secp256k1KeyPair {
@@ -27,8 +44,38 @@ impl Secp256k1KeyPair {
 
         Self {
             public_key,
-            secret_key,
+            secret_key: Some(secret_key),
         }
+    }
+
+    /// Parse full or compressed pubkey from hexstring. Both `0x...`
+    /// and raw hexstring are supported.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use kv_server::crypto::secp256k1::Secp256k1KeyPair;
+    /// # use hex_literal::hex;
+    /// # let pubkey_hex = "0x04c7cacde73af939c35d527b34e0556ea84bab27e6c0ed7c6c59be70f6d2db59c206b23529977117dc8a5d61fa848f94950422b79d1c142bcf623862e49f9e6575";
+    /// let pair = Secp256k1KeyPair::from_pubkey_hex(&pubkey_hex.to_string()).unwrap();
+    /// # assert_eq!(hex!("04c7cacde73af939c35d527b34e0556ea84bab27e6c0ed7c6c59be70f6d2db59c206b23529977117dc8a5d61fa848f94950422b79d1c142bcf623862e49f9e6575"), pair.public_key.serialize());
+    /// ```
+    pub fn from_pubkey_hex(pubkey_hex: &String) -> Result<Self, Error> {
+        let hex: &str;
+        if pubkey_hex.starts_with("0x") {
+            hex = &pubkey_hex[2..];
+        } else {
+            hex = pubkey_hex;
+        };
+        let pubkey_bytes = hex::decode(hex).map_err(|e| Error::from(e))?;
+
+        // `None` will try 65- and 33-bytes parser                   vvvv
+        let pubkey =
+            PublicKey::parse_slice(pubkey_bytes.as_slice(), None).map_err(|e| Error::from(e))?;
+        Ok(Self {
+            public_key: pubkey,
+            secret_key: None,
+        })
     }
 
     /// `web3.eth.personal.sign`
@@ -61,7 +108,7 @@ impl Secp256k1KeyPair {
         let hashed_message = super::util::hash_keccak256(&message);
 
         let (signature, recovery_id) =
-            libsecp256k1::sign(&Message::parse(&hashed_message), &self.secret_key);
+            libsecp256k1::sign(&Message::parse(&hashed_message), &self.secret_key.unwrap());
 
         let mut result: Vec<u8> = vec![];
         result.extend_from_slice(&signature.r.b32());

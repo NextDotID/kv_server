@@ -6,6 +6,8 @@ pub enum Error {
     // http
     #[error("Param missing: {0}")]
     ParamMissing(String),
+    #[error("Param error: {0}")]
+    ParamError(String),
     #[error("no body provided")]
     BodyMissing,
     #[error("JSON parse error")]
@@ -33,6 +35,11 @@ pub enum Error {
         #[from]
         source: libsecp256k1::Error,
     },
+    #[error("Parse hex error: {source:?}")]
+    HexError {
+        #[from]
+        source: hex::FromHexError,
+    }
     // #[error("Crypto error: {source: ?}")]
     // CryptoCoreError {
     //     #[from]
@@ -44,12 +51,14 @@ impl Error {
     pub fn http_status(&self) -> StatusCode {
         match self {
             Error::ParamMissing(_) => StatusCode::BAD_REQUEST,
+            Error::ParamError(_) => StatusCode::BAD_REQUEST,
             Error::BodyMissing => StatusCode::BAD_REQUEST,
             Error::ParseError { source: _ } => StatusCode::BAD_REQUEST,
             Error::HttpError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::ConfigError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::DatabaseError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::CryptoError { source: _ } => StatusCode::BAD_REQUEST,
+            Error::HexError { source: _ } => StatusCode::BAD_REQUEST,
         }
     }
 }
