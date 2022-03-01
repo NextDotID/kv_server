@@ -2,21 +2,18 @@ use std::convert::Infallible;
 use std::future::Future;
 use std::net::SocketAddr;
 
-use kv_server::{config::C, error::Error};
-use kv_server::controller::{
-    healthz, upload,
-    Body, Response, Request, error_response, query
-};
+use hyper::service::{make_service_fn, service_fn};
 use hyper::{
-    Method,
-    Server,
-    StatusCode,
     Body as HyperBody,
+    Method,
     Request as HyperRequest,
     Response as HyperResponse,
-//  Error as HyperError,
+    //  Error as HyperError,
+    Server,
+    StatusCode,
 };
-use hyper::service::{make_service_fn, service_fn};
+use kv_server::controller::{error_response, healthz, query, upload, Body, Request, Response};
+use kv_server::{config::C, error::Error};
 use log::info;
 
 #[tokio::main]
@@ -26,9 +23,7 @@ async fn main() {
         .parse()
         .expect("Unable to parse web listen address");
 
-    let make_svc = make_service_fn(|_conn| async {
-        Ok::<_, Infallible>(service_fn(entrypoint))
-    });
+    let make_svc = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(entrypoint)) });
 
     let server = Server::bind(&addr).serve(make_svc);
     if let Err(e) = server.await {
@@ -47,7 +42,6 @@ async fn entrypoint(req: HyperRequest<HyperBody>) -> Result<HyperResponse<HyperB
         (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
         (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
         // (&Method::POST, "/upload") => parse(req, upload::controller).await,
-
         _ => HyperResponse::builder()
             .status(StatusCode::NOT_FOUND)
             .body("Not Found".into())
@@ -55,8 +49,12 @@ async fn entrypoint(req: HyperRequest<HyperBody>) -> Result<HyperResponse<HyperB
     })
 }
 
-async fn parse<F>(req: HyperRequest<HyperBody>, controller: fn(Request) -> F) -> HyperResponse<HyperBody>
-    where F: Future<Output = Result<Response, Error>>
+async fn parse<F>(
+    req: HyperRequest<HyperBody>,
+    controller: fn(Request) -> F,
+) -> HyperResponse<HyperBody>
+where
+    F: Future<Output = Result<Response, Error>>,
 {
     let (parts, hyper_body) = req.into_parts();
     let full_body = hyper::body::to_bytes(hyper_body).await.unwrap();
@@ -68,11 +66,11 @@ async fn parse<F>(req: HyperRequest<HyperBody>, controller: fn(Request) -> F) ->
             let (parts, our_resp) = resp.into_parts();
             let hyper_body = HyperBody::from(our_resp);
             HyperResponse::from_parts(parts, hyper_body)
-        },
+        }
         Err(err) => {
             let (parts, our_resp) = error_response(err).into_parts();
             let hyper_body = HyperBody::from(our_resp);
             HyperResponse::from_parts(parts, hyper_body)
-        },
+        }
     }
 }

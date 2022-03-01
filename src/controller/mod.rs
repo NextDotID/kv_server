@@ -1,6 +1,6 @@
 pub mod healthz;
-pub mod upload;
 pub mod query;
+pub mod upload;
 
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
