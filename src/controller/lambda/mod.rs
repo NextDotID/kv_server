@@ -3,7 +3,7 @@ use crate::controller::{
     healthz, upload, error_response,
     Request as OurRequest,
     Response as OurResponse,
-    Body as OurBody,
+    Body as OurBody, query,
 };
 use http::{Method, StatusCode};
 use std::future::Future;
@@ -45,7 +45,8 @@ pub async fn entrypoint(req: LambdaRequest) -> Result<impl IntoResponse, LambdaE
 
     Ok(match (req.method(), req.uri().path()) {
         (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
-        (&Method::POST, "/upload") => parse(req, upload::controller).await,
+        (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
+        // (&Method::POST, "/upload") => parse(req, upload::controller).await,
 
         _ => LambdaResponse::builder()
             .status(StatusCode::NOT_FOUND)

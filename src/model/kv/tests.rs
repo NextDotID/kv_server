@@ -7,8 +7,8 @@ mod tests {
 
     use crate::{
         error::Error,
-        model::{establish_connection, kv::find_or_create},
-        schema::kv::dsl::*,
+        model::{establish_connection, kv::{find_or_create, find_all_by_persona}},
+        schema::kv::dsl::*, crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key },
     };
 
     fn before_each(connection: &PgConnection) -> Result<(), Error> {
@@ -54,6 +54,21 @@ mod tests {
         let (kv_found_2, _) = find_or_create(&c, "twitter", &username, &PUBKEY.to_string())?;
         assert_eq!(kv_found_2.content, json!({}));
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_all_by_persona() -> Result<(), Error> {
+        let c = establish_connection();
+        before_each(&c)?;
+        let username: String = Faker.fake();
+        let Secp256k1KeyPair{ public_key: pubkey, secret_key: _ } = Secp256k1KeyPair::generate();
+        let pubkey_hex = compress_public_key(&pubkey);
+
+        find_or_create(&c, "twitter", &username, &pubkey_hex).unwrap();
+
+        let result = find_all_by_persona(&c, &pubkey_hex).unwrap();
+        assert_eq!(result.len(), 1);
         Ok(())
     }
 }

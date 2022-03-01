@@ -53,6 +53,7 @@ where
     Ok(serde_json::from_str(&body)?)
 }
 
+/// Persona should be 33-bytes hexstring (`0x[0-9a-f]{66}`)
 pub async fn query(base: &str, persona: &str) -> Result<ProofQueryResponse, Error> {
     let client = make_client();
     let uri = format!("{}/v1/proof?platform=nextid&identity={}", base, persona)

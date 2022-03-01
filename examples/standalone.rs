@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use kv_server::{config::C, error::Error};
 use kv_server::controller::{
     healthz, upload,
-    Body, Response, Request, error_response
+    Body, Response, Request, error_response, query
 };
 use hyper::{
     Method,
@@ -45,7 +45,8 @@ async fn entrypoint(req: HyperRequest<HyperBody>) -> Result<HyperResponse<HyperB
 
     Ok(match (req.method(), req.uri().path()) {
         (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
-        (&Method::POST, "/upload") => parse(req, upload::controller).await,
+        (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
+        // (&Method::POST, "/upload") => parse(req, upload::controller).await,
 
         _ => HyperResponse::builder()
             .status(StatusCode::NOT_FOUND)

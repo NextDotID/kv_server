@@ -1,18 +1,18 @@
 mod tests;
 
-use crate::{error::Error, crypto::secp256k1::Secp256k1KeyPair};
 use crate::schema::kv;
 use crate::schema::kv::dsl::*;
+use crate::{crypto::secp256k1::Secp256k1KeyPair, error::Error};
 
-use log::debug;
 use ::uuid::Uuid;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound;
 use diesel::PgConnection;
+use log::debug;
 use serde::{Deserialize, Serialize};
 
 #[derive(Identifiable, Queryable, Serialize, Deserialize, Debug)]
-#[table_name="kv"]
+#[table_name = "kv"]
 pub struct KV {
     pub id: i32,
     pub uuid: Option<Uuid>,
@@ -42,6 +42,15 @@ impl KV {
             .map_err(|e| Error::from(e))?;
         Ok(())
     }
+}
+
+/// Find all KVs belong to given persona.
+pub fn find_all_by_persona(conn: &PgConnection, persona_given: &str) -> Result<Vec<KV>, Error> {
+    let persona_parsed = Secp256k1KeyPair::from_pubkey_hex(&persona_given.into())?;
+    let persona_vec = persona_parsed.public_key.serialize().to_vec();
+    let result: Vec<KV> = kv.filter(persona.eq(&persona_vec)).get_results(conn).map_err(|e| Error::from(e))?;
+
+    Ok(result)
 }
 
 /// Returns (KV, is_founded)
