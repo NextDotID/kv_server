@@ -52,9 +52,11 @@ pub fn find_or_create(
     expected_persona: &String,
 ) -> Result<(KV, bool), Error> {
     let persona_given = Secp256k1KeyPair::from_pubkey_hex(expected_persona)?;
+    let persona_vec = persona_given.public_key.serialize().to_vec();
     let found: Result<KV, _> = kv
         .filter(platform.eq(expected_platform))
         .filter(identity.eq(expected_identity))
+        .filter(persona.eq(&persona_vec))
         .first(conn);
     debug!("Found: {:?}", found.is_ok());
     // Found
@@ -71,7 +73,7 @@ pub fn find_or_create(
         .values((
             platform.eq(expected_platform),
             identity.eq(expected_identity),
-            persona.eq(persona_given.public_key.serialize().to_vec()),
+            persona.eq(persona_vec),
         ))
         .get_result(conn)
         .map(|created| (created, false))

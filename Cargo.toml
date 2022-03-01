@@ -42,3 +42,6 @@ sha3 = "0.10" # Keccak256
 base64 = "0.13"
 hex = "0.4"
 hex-literal = "0.3"
+
+[dev_dependencies]
+fake = "2.4"

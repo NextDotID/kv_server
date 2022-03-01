@@ -35,7 +35,7 @@ impl Secp256k1KeyPair {
     ///
     /// let keypair = Secp256k1KeyPair::generate();
     /// # assert_eq!(65, keypair.public_key.serialize().len());
-    /// # assert_eq!(32, keypair.secret_key.serialize().len());
+    /// # assert_eq!(32, keypair.secret_key.unwrap().serialize().len());
     /// ```
     pub fn generate() -> Self {
         let mut rng = rngs::OsRng;
@@ -91,7 +91,7 @@ impl Secp256k1KeyPair {
     /// # let expected = hex!("bc14fed2a5ae2c5c7e793f2a45f4f9aad84c7caa56139ee4a802806c5bb1a9cf4baa0e2df71bf3d0a943fbfb177afc1bd9c17995a6f409928548f3318d3f9b6300");
     /// # let keypair = Secp256k1KeyPair {
     /// #     public_key: PublicKey::from_secret_key(&secret_key),
-    /// #     secret_key,
+    /// #     secret_key: Some(secret_key),
     /// # };
     /// let result = keypair.personal_sign(&sign_payload).unwrap();
     /// # assert_eq!(expected, result.as_slice())
@@ -135,7 +135,7 @@ impl Secp256k1KeyPair {
     /// # let expected = format!("vBT+0qWuLFx+eT8qRfT5qthMfKpWE57kqAKAbFuxqc9Lqg4t9xvz0KlD+/sXevwb2cF5lab0CZKFSPMxjT+bYwA=");
     /// # let keypair = Secp256k1KeyPair {
     /// #     public_key: PublicKey::from_secret_key(&secret_key),
-    /// #     secret_key,
+    /// #     secret_key: Some(secret_key),
     /// # };
     /// let result = keypair.base64_personal_sign(&sign_payload).unwrap();
     /// # assert_eq!(expected, result)
@@ -158,7 +158,7 @@ impl Secp256k1KeyPair {
     /// let sign_payload = String::from("Test123!");
     /// # let keypair = Secp256k1KeyPair {
     /// #   public_key,
-    /// #   secret_key,
+    /// #   secret_key: Some(secret_key),
     /// # };
     /// # let signature = keypair.base64_personal_sign(&sign_payload).unwrap();
     /// # let sig = base64::decode(signature).unwrap();
