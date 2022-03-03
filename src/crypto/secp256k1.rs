@@ -1,4 +1,7 @@
-use crate::{crypto::util::{hash_keccak256, compress_public_key}, error::Error};
+use crate::{
+    crypto::util::{compress_public_key, hash_keccak256},
+    error::Error,
+};
 use libsecp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 use rand::rngs;
 
@@ -68,10 +71,14 @@ impl Secp256k1KeyPair {
             hex = pubkey_hex;
         };
         let pubkey_bytes = hex::decode(hex).map_err(|e| Error::from(e))?;
+        Self::from_pubkey_vec(&pubkey_bytes)
+    }
 
-        // `None` will try 65- and 33-bytes parser                   vvvv
+    pub fn from_pubkey_vec(pubkey_vec: &Vec<u8>) -> Result<Self, Error> {
+        // `None` will try 65- and 33-bytes parser        vvvv
         let pubkey =
-            PublicKey::parse_slice(pubkey_bytes.as_slice(), None).map_err(|e| Error::from(e))?;
+            PublicKey::parse_slice(pubkey_vec.as_slice(), None).map_err(|e| Error::from(e))?;
+
         Ok(Self {
             public_key: pubkey,
             secret_key: None,

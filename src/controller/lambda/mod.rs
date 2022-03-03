@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::controller::{
-    healthz, upload, error_response,
+    healthz, error_response,
     Request as OurRequest,
     Response as OurResponse,
     Body as OurBody, query,

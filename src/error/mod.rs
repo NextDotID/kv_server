@@ -34,10 +34,12 @@ pub enum Error {
         source: diesel::result::Error,
     },
     #[error("Crypto error: {source:?}")]
-    CryptoError{
+    CryptoError {
         #[from]
         source: libsecp256k1::Error,
     },
+    #[error("Signature validation error: {0}")]
+    SignatureValidationError(String),
     #[error("Parse hex error: {source:?}")]
     HexError {
         #[from]
@@ -47,12 +49,7 @@ pub enum Error {
     HttpClientError {
         #[from]
         source: hyper::Error,
-    }
-    // #[error("Crypto error: {source: ?}")]
-    // CryptoCoreError {
-    //     #[from]
-    //     source: libsecp256k1::Error,
-    // }
+    },
 }
 
 impl Error {
@@ -69,6 +66,7 @@ impl Error {
             Error::CryptoError { source: _ } => StatusCode::BAD_REQUEST,
             Error::HexError { source: _ } => StatusCode::BAD_REQUEST,
             Error::HttpClientError { source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::SignatureValidationError(_) => StatusCode::BAD_REQUEST,
         }
     }
 }

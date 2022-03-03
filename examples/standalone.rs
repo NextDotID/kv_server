@@ -12,7 +12,7 @@ use hyper::{
     Server,
     StatusCode,
 };
-use kv_server::controller::{error_response, healthz, query, upload, Body, Request, Response};
+use kv_server::controller::{error_response, healthz, query, Body, Request, Response};
 use kv_server::{config::C, error::Error};
 use log::info;
 

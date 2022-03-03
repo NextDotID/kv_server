@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 
 pub mod kv;
+pub mod kv_chains;
 
 pub fn establish_connection() -> PgConnection {
     let database_url = crate::config::C.database_url();

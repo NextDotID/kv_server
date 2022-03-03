@@ -6,9 +6,7 @@ use crate::{crypto::secp256k1::Secp256k1KeyPair, error::Error};
 
 use ::uuid::Uuid;
 use diesel::prelude::*;
-use diesel::result::Error::NotFound;
 use diesel::PgConnection;
-use log::debug;
 use serde::{Deserialize, Serialize};
 
 #[derive(Identifiable, Queryable, Serialize, Deserialize, Debug)]
@@ -62,21 +60,17 @@ pub fn find_or_create(
 ) -> Result<(KV, bool), Error> {
     let persona_given = Secp256k1KeyPair::from_pubkey_hex(expected_persona)?;
     let persona_vec = persona_given.public_key.serialize().to_vec();
-    let found: Result<KV, _> = kv
+    let found: Option<KV> = kv
         .filter(platform.eq(expected_platform))
         .filter(identity.eq(expected_identity))
         .filter(persona.eq(&persona_vec))
-        .first(conn);
-    debug!("Found: {:?}", found.is_ok());
+        .first(conn).optional()?;
+
     // Found
-    if let Ok(result) = found {
-        return Ok((result, true));
+    if found.is_some() {
+        return Ok((found.unwrap(), true));
     }
-    // General DB error
-    let err = found.unwrap_err();
-    if err != NotFound {
-        return Err(err.into());
-    }
+
     // Create
     diesel::insert_into(kv::table)
         .values((
