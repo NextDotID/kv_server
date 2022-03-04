@@ -29,5 +29,9 @@ lambda-update: lambda-pack
 lambda-delete:
 	@aws lambda delete-function --function-name ${func}
 
+pg-connect:
+	@echo "kv_server\n" | docker-compose exec pg psql -Ukv_server kv_server_development
+
+
 test:
 	@RUST_BACKTRACE=1 RUST_LOG=debug cargo test -- --nocapture

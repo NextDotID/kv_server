@@ -8,8 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::Error,
-    schema::{kv_chains, kv_chains::dsl::*}, crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key},
+    schema::{kv_chains, kv_chains::dsl::*}, crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key}, util::vec_to_base64,
 };
+
+use super::establish_connection;
 
 #[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, Debug)]
 #[table_name = "kv_chains"]
@@ -65,7 +67,18 @@ impl NewKVChain {
     }
 
     /// Generate signature body for this KVChain request.
-    pub fn sign_body(&self) -> String {
+    pub fn sign_body(&self) -> Result<String, Error> {
+        let mut previous_sig: Option<String> = None;
+        if let Some(prev_id) = self.previous_id {
+            let conn = establish_connection();
+            let prev_kv_sig_bytes = kv_chains
+                .select(signature)
+                .filter(id.eq(prev_id))
+                .get_result::<Vec<u8>>(&conn)
+                .map_err(|e| Error::from(e))?;
+            previous_sig = Some(vec_to_base64(&prev_kv_sig_bytes));
+        }
+
         let body: serde_json::Value = json!({
             "version": "1",
             "uuid": self.uuid.to_string(),
@@ -73,26 +86,25 @@ impl NewKVChain {
             "platform": self.platform,
             "identity": self.identity,
             "patch": self.patch,
-            "previous": "", // TODO
+            "previous": previous_sig,
         });
 
-        serde_json::to_string(&body).unwrap()
+        Ok(serde_json::to_string(&body).unwrap())
     }
 
     /// Generate a signature using given keypair.
     /// For development and test only.
     pub fn sign(&self, keypair: &Secp256k1KeyPair) -> Result<Vec<u8>, Error> {
-        let body = self.sign_body();
+        let body = self.sign_body()?;
         keypair.personal_sign(&body)
     }
 
     /// Validate if this KVChain has valid signature
     pub fn validate(&self) -> Result<(), Error> {
-        let sign_body = self.sign_body();
-        let key_pair = Secp256k1KeyPair::from_pubkey_vec(&self.persona)?;
-        let pk = Secp256k1KeyPair::recover_from_personal_signature(&self.signature, &sign_body)?;
+        let sign_body = self.sign_body()?;
+        let recovered_pk = Secp256k1KeyPair::recover_from_personal_signature(&self.signature, &sign_body)?;
 
-        if pk != key_pair.public_key {
+        if recovered_pk != self.public_key() {
             Err(Error::SignatureValidationError("Public key mismatch".into()))
         } else {
             Ok(())

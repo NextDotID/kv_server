@@ -122,9 +122,7 @@ impl Secp256k1KeyPair {
         result.extend_from_slice(&signature.s.b32());
         result.extend_from_slice(&[recovery_id.serialize()]);
         if result.len() != 65 {
-            return Err(Error::CryptoError {
-                source: libsecp256k1::Error::InvalidInputLength,
-            });
+            return Err(Error::CryptoError(libsecp256k1::Error::InvalidInputLength));
         }
         Ok(result)
     }
@@ -185,9 +183,9 @@ impl Secp256k1KeyPair {
         );
         let digest = hash_keccak256(&personal_payload);
 
-        let recovery_id = sig_r_s_recovery.get(64).ok_or_else(|| Error::CryptoError {
-            source: libsecp256k1::Error::InvalidInputLength,
-        })?;
+        let recovery_id = sig_r_s_recovery
+            .get(64)
+            .ok_or_else(|| Error::CryptoError(libsecp256k1::Error::InvalidInputLength))?;
         let signature = Signature::parse_standard_slice(&sig_r_s_recovery.as_slice()[..64])
             .map_err(|e| Error::from(e))?;
         let pubkey = libsecp256k1::recover(

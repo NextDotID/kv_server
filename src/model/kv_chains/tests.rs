@@ -12,7 +12,7 @@ mod tests {
             establish_connection,
             kv_chains::{KVChain, NewKVChain},
         },
-        schema::kv_chains::dsl::*,
+        schema::kv_chains::dsl::*, util::vec_to_base64,
     };
 
     fn before_each(connection: &PgConnection) -> Result<(), Error> {
@@ -83,6 +83,52 @@ mod tests {
         assert_eq!(new_link.previous_id.unwrap(), link.id);
         assert_eq!(new_link.platform, "facebook");
         assert_eq!(new_link.identity, new_identity);
+        Ok(())
+    }
+
+    #[test]
+    fn test_newkv_for_persona() -> Result<(), Error> {
+        let conn = establish_connection();
+        before_each(&conn)?;
+        let Secp256k1KeyPair { public_key, secret_key: _ } = Secp256k1KeyPair::generate();
+        let link = generate_data(&conn, &public_key)?;
+
+        let new_kv = NewKVChain::for_persona(&conn, &public_key)?;
+        assert_eq!(new_kv.persona, public_key.serialize().to_vec());
+        assert_eq!(new_kv.previous_id, Some(link.id));
+        Ok(())
+    }
+
+    #[test]
+    fn test_newkv_sign_body() -> Result<(), Error> {
+        let conn = establish_connection();
+        before_each(&conn)?;
+        let Secp256k1KeyPair { public_key, secret_key: _ } = Secp256k1KeyPair::generate();
+        let link = generate_data(&conn, &public_key)?;
+        let new_kv = NewKVChain::for_persona(&conn, &public_key)?;
+
+        let sign_body = new_kv.sign_body()?;
+        println!("{}", sign_body);
+        assert!(sign_body.contains(&vec_to_base64(&link.signature)));
+        assert!(sign_body.contains(&format!("{}", new_kv.uuid.to_string())));
+        Ok(())
+    }
+
+    #[test]
+    fn test_newkv_sign_and_verify() -> Result<(), Error> {
+        let conn = establish_connection();
+        before_each(&conn)?;
+        let keypair = Secp256k1KeyPair::generate();
+        generate_data(&conn, &keypair.public_key)?;
+        let mut new_kv = NewKVChain::for_persona(&conn, &keypair.public_key)?;
+        new_kv.platform = "facebook".into();
+        new_kv.identity = Faker.fake();
+        new_kv.patch = json!({"test": ["abc"]});
+
+        let sig = new_kv.sign(&keypair)?;
+        new_kv.signature = sig;
+        assert!(new_kv.validate().is_ok());
+
         Ok(())
     }
 }
