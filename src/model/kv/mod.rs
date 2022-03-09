@@ -1,12 +1,12 @@
 mod tests;
 
-use crate::schema::kv;
-use crate::schema::kv::dsl::*;
-use crate::{crypto::secp256k1::Secp256k1KeyPair, error::Error};
-
+use crate::{
+    error::Error,
+    schema::kv::{self, dsl::*},
+};
 use ::uuid::Uuid;
-use diesel::prelude::*;
-use diesel::PgConnection;
+use diesel::{prelude::*, PgConnection};
+use libsecp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
 
 #[derive(Identifiable, Queryable, Serialize, Deserialize, Debug)]
@@ -43,10 +43,15 @@ impl KV {
 }
 
 /// Find all KVs belong to given persona.
-pub fn find_all_by_persona(conn: &PgConnection, persona_given: &str) -> Result<Vec<KV>, Error> {
-    let persona_parsed = Secp256k1KeyPair::from_pubkey_hex(&persona_given.into())?;
-    let persona_vec = persona_parsed.public_key.serialize().to_vec();
-    let result: Vec<KV> = kv.filter(persona.eq(&persona_vec)).get_results(conn).map_err(|e| Error::from(e))?;
+pub fn find_all_by_persona(
+    conn: &PgConnection,
+    persona_given: &PublicKey,
+) -> Result<Vec<KV>, Error> {
+    let persona_vec = persona_given.serialize().to_vec();
+    let result: Vec<KV> = kv
+        .filter(persona.eq(&persona_vec))
+        .get_results(conn)
+        .map_err(|e| Error::from(e))?;
 
     Ok(result)
 }
@@ -56,15 +61,15 @@ pub fn find_or_create(
     conn: &PgConnection,
     expected_platform: &str,
     expected_identity: &str,
-    expected_persona: &String,
+    expected_persona: &PublicKey,
 ) -> Result<(KV, bool), Error> {
-    let persona_given = Secp256k1KeyPair::from_pubkey_hex(expected_persona)?;
-    let persona_vec = persona_given.public_key.serialize().to_vec();
+    let persona_vec: Vec<u8> = expected_persona.serialize().to_vec();
     let found: Option<KV> = kv
         .filter(platform.eq(expected_platform))
         .filter(identity.eq(expected_identity))
         .filter(persona.eq(&persona_vec))
-        .first(conn).optional()?;
+        .first(conn)
+        .optional()?;
 
     // Found
     if found.is_some() {
@@ -76,7 +81,7 @@ pub fn find_or_create(
         .values((
             platform.eq(expected_platform),
             identity.eq(expected_identity),
-            persona.eq(persona_vec),
+            persona.eq(&persona_vec),
         ))
         .get_result(conn)
         .map(|created| (created, false))

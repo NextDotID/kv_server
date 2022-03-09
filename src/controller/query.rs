@@ -1,23 +1,25 @@
 use crate::{
     controller::{query_parse, Request, Response},
     error::Error,
-    model::{establish_connection, kv},
+    model::{establish_connection, kv}, crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key},
 };
+use diesel::PgConnection;
 use http::StatusCode;
+use libsecp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
 
 use super::json_response;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct QueryResponse<'a> {
-    pub persona: &'a str,
-    pub proofs: Vec<QueryResponseSingleProof<'a>>,
+pub struct QueryResponse {
+    pub persona: String,
+    pub proofs: Vec<QueryResponseSingleProof>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct QueryResponseSingleProof<'a> {
-    pub platform: &'a str,
-    pub identity: &'a str,
+pub struct QueryResponseSingleProof {
+    pub platform: String,
+    pub identity: String,
     pub content: serde_json::Value,
 }
 
@@ -26,24 +28,31 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
     let persona_hex = params
         .get("persona")
         .ok_or(Error::ParamMissing("persona".into()))?;
+    let Secp256k1KeyPair { public_key, secret_key: _} = Secp256k1KeyPair::from_pubkey_hex(persona_hex)?;
 
     let conn = establish_connection();
-    let results = kv::find_all_by_persona(&conn, persona_hex)?;
+    let response = query_response(&conn, &public_key)?;
 
+    json_response(StatusCode::OK, &response)
+}
+
+pub fn query_response(conn: &PgConnection, persona_public_key: &PublicKey) -> Result<QueryResponse, Error> {
+    let results = kv::find_all_by_persona(&conn, persona_public_key)?;
+
+    let persona_hex = compress_public_key(persona_public_key);
     let mut response = QueryResponse {
         persona: persona_hex,
         proofs: vec![],
     };
     for proof in results.iter() {
         let proof_single = QueryResponseSingleProof {
-            platform: proof.platform.as_str(),
-            identity: proof.identity.as_str(),
+            platform: proof.platform.clone(),
+            identity: proof.identity.clone(),
             content: proof.content.clone(),
         };
         response.proofs.push(proof_single);
     }
-
-    json_response(StatusCode::OK, &response)
+    Ok(response)
 }
 
 #[cfg(test)]
@@ -80,18 +89,17 @@ mod tests {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let pubkey_hex = compress_public_key(&public_key);
-        kv::find_or_create(&conn, "twitter", &fake::Faker.fake::<String>(), &pubkey_hex).unwrap();
+        kv::find_or_create(&conn, "twitter", &fake::Faker.fake::<String>(), &public_key).unwrap();
 
         let req: Request = ::http::Request::builder()
             .method(Method::GET)
-            .uri(format!("http://localhost/test?persona={}", pubkey_hex))
+            .uri(format!("http://localhost/test?persona={}", compress_public_key(&public_key)))
             .body("".into())
             .unwrap();
         let resp = controller(req).await.unwrap();
         let body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(1, body.proofs.len());
-        assert_eq!(pubkey_hex, body.persona);
+        assert_eq!(compress_public_key(&public_key), body.persona);
         assert_eq!("twitter", body.proofs.first().unwrap().platform);
         assert_eq!(json!({}), body.proofs.first().unwrap().content);
     }

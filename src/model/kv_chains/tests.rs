@@ -60,7 +60,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newkv_append() -> Result<(), Error> {
+    fn test_newkv_finalize() -> Result<(), Error> {
         let conn = establish_connection();
         before_each(&conn)?;
         let Secp256k1KeyPair {
@@ -79,7 +79,7 @@ mod tests {
             previous_id: Some(link.id),
             signature: vec![2],
         };
-        let new_link = link.append(&conn, &new_kvchain)?;
+        let new_link = new_kvchain.finalize(&conn)?;
         assert_eq!(new_link.previous_id.unwrap(), link.id);
         assert_eq!(new_link.platform, "facebook");
         assert_eq!(new_link.identity, new_identity);

@@ -1,17 +1,18 @@
 mod tests;
 
-use serde_json::json;
 use ::uuid::Uuid;
 use diesel::{insert_into, prelude::*, PgConnection};
 use libsecp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{
+    crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key},
     error::Error,
-    schema::{kv_chains, kv_chains::dsl::*}, crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key}, util::vec_to_base64,
+    model::{establish_connection, kv::KV},
+    schema::{kv_chains, kv_chains::dsl::*},
+    util::vec_to_base64,
 };
-
-use super::establish_connection;
 
 #[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, Debug)]
 #[table_name = "kv_chains"]
@@ -41,24 +42,26 @@ pub struct NewKVChain {
 
 impl NewKVChain {
     /// Generate a new KVChain append request for given persona.
-    pub fn for_persona(conn: &PgConnection, persona_given: &PublicKey) -> Result<NewKVChain, Error> {
+    pub fn for_persona(
+        conn: &PgConnection,
+        persona_given: &PublicKey,
+    ) -> Result<NewKVChain, Error> {
         let last_link = KVChain::find_last_link(conn, persona_given)?;
         let persona_vec = persona_given.serialize().to_vec();
-        let mut new_kvchain = NewKVChain{
+
+        Ok(NewKVChain {
             uuid: ::uuid::Uuid::new_v4(),
             persona: persona_vec,
             platform: "".into(),
             identity: "".into(),
             patch: json!({}),
-            previous_id: None,
+            previous_id: if let Some(last_link_instance) = last_link {
+                Some(last_link_instance.id)
+            } else {
+                None
+            },
             signature: vec![],
-        };
-
-        if let Some(last_link_instance) = last_link {
-            new_kvchain.previous_id = Some(last_link_instance.id);
-        }
-
-        Ok(new_kvchain)
+        })
     }
 
     /// Convert persona byte vec into `PublicKey` instance.
@@ -102,13 +105,24 @@ impl NewKVChain {
     /// Validate if this KVChain has valid signature
     pub fn validate(&self) -> Result<(), Error> {
         let sign_body = self.sign_body()?;
-        let recovered_pk = Secp256k1KeyPair::recover_from_personal_signature(&self.signature, &sign_body)?;
+        let recovered_pk =
+            Secp256k1KeyPair::recover_from_personal_signature(&self.signature, &sign_body)?;
 
         if recovered_pk != self.public_key() {
-            Err(Error::SignatureValidationError("Public key mismatch".into()))
+            Err(Error::SignatureValidationError(
+                "Public key mismatch".into(),
+            ))
         } else {
             Ok(())
         }
+    }
+
+    /// Save myself into DB.
+    pub fn finalize(&self, conn: &PgConnection) -> Result<KVChain, Error> {
+        insert_into(kv_chains)
+            .values(self)
+            .get_result(conn)
+            .map_err(|e| e.into())
     }
 }
 
@@ -128,16 +142,19 @@ impl KVChain {
         Ok(found)
     }
 
-    /// Append a new link from current link.
-    /// No check of validity is performed.
-    pub fn append(
-        &self,
-        conn: &PgConnection,
-        new_kvchain: &NewKVChain,
-    ) -> Result<KVChain, Error> {
-        insert_into(kv_chains)
-            .values(new_kvchain)
-            .get_result(conn)
-            .map_err(|e| e.into())
+    /// Perform patch on KV record.
+    pub fn perform_patch(&self, conn: &PgConnection) -> Result<KV, Error> {
+        use crate::model::kv;
+
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::from_pubkey_vec(&self.persona)?;
+
+        let (kv_record, _is_new) =
+            kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
+        kv_record.patch(conn, &self.patch)?;
+
+        Ok(kv_record)
     }
 }

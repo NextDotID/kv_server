@@ -31,6 +31,8 @@ pub enum Error {
     HttpClientError(#[from] hyper::Error),
     #[error("base64 error: {0}")]
     Base64Error(#[from] base64::DecodeError),
+    #[error("UUID parse error: {0}")]
+    UuidParseError(#[from] uuid::parser::ParseError),
 }
 
 impl Error {
@@ -49,6 +51,7 @@ impl Error {
             Error::HttpClientError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SignatureValidationError(_) => StatusCode::BAD_REQUEST,
             Error::Base64Error(_) => StatusCode::BAD_REQUEST,
+            Error::UuidParseError(_) => StatusCode::BAD_REQUEST,
         }
     }
 }

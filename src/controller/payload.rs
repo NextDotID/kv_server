@@ -17,6 +17,7 @@ struct PayloadRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PayloadResponse {
+    pub uuid: String,
     pub sign_payload: String,
 }
 
@@ -31,7 +32,10 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
     new_kvchain.patch = params.patch;
     let sign_payload = new_kvchain.sign_body()?;
 
-    Ok(json_response(StatusCode::OK, &PayloadResponse{sign_payload})?)
+    Ok(json_response(StatusCode::OK, &PayloadResponse{
+        sign_payload,
+        uuid: new_kvchain.uuid.to_string(),
+    })?)
 }
 
 #[cfg(test)]
@@ -82,6 +86,7 @@ mod tests {
             .unwrap();
         let resp = controller(req).await.unwrap();
         let body: PayloadResponse = serde_json::from_str(resp.body()).unwrap();
+        assert!(body.uuid.len() > 0);
         let payload = body.sign_payload;
         assert!(payload.contains(&compress_public_key(&public_key)));
         assert!(payload.contains(r#""test":"abc""#));
