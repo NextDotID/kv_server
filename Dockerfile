@@ -22,8 +22,6 @@ LABEL maintainer="Nyk Ma <nykma@mask.io>"
 
 WORKDIR /app
 
-# ENTRYPOINT /bin/bash
-# RUN yum install -y postgresql-devel openssl-devel && yum clean all && rm -rf /var/cache/yum
-# ENTRYPOINT ["/bin/bash", "-c", "/lambda-entrypoint.sh"]
+RUN yum install -y postgresql-devel openssl-devel && yum clean all && rm -rf /var/cache/yum
 
 COPY --from=builder /app/target/release/examples/lambda ${LAMBDA_RUNTIME_DIR}/bootstrap

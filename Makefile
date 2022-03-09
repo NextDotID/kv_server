@@ -30,11 +30,10 @@ lambda-delete:
 	@aws lambda delete-function --function-name ${func}
 
 lambda-container-build:
-	@docker build -t nextid/kv-server-lambda:latest .
+	@docker build --platform linux/amd64 -t nextid/kv-server-lambda:latest .
 
 pg-connect:
 	@echo "kv_server\n" | docker-compose exec pg psql -Ukv_server kv_server_development
-
 
 test:
 	@RUST_BACKTRACE=1 RUST_LOG=debug cargo test -- --nocapture
