@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use diesel::{insert_into, PgConnection, QueryDsl, RunQueryDsl};
+    use diesel::{insert_into, PgConnection, RunQueryDsl};
     use fake::{Fake, Faker};
     use libsecp256k1::PublicKey;
     use serde_json::json;
@@ -12,7 +12,8 @@ mod tests {
             establish_connection,
             kv_chains::{KVChain, NewKVChain},
         },
-        schema::kv_chains::dsl::*, util::vec_to_base64,
+        schema::kv_chains::dsl::*,
+        util::vec_to_base64,
     };
 
     fn before_each(connection: &PgConnection) -> Result<(), Error> {
@@ -20,7 +21,6 @@ mod tests {
         // Clear DB
         diesel::delete(kv_chains).execute(connection)?;
         diesel::delete(crate::schema::kv::dsl::kv).execute(connection)?;
-        assert_eq!(Ok(0), kv_chains.count().get_result(connection));
         Ok(())
     }
 
@@ -90,7 +90,10 @@ mod tests {
     fn test_newkv_for_persona() -> Result<(), Error> {
         let conn = establish_connection();
         before_each(&conn)?;
-        let Secp256k1KeyPair { public_key, secret_key: _ } = Secp256k1KeyPair::generate();
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::generate();
         let link = generate_data(&conn, &public_key)?;
 
         let new_kv = NewKVChain::for_persona(&conn, &public_key)?;
@@ -103,7 +106,10 @@ mod tests {
     fn test_newkv_sign_body() -> Result<(), Error> {
         let conn = establish_connection();
         before_each(&conn)?;
-        let Secp256k1KeyPair { public_key, secret_key: _ } = Secp256k1KeyPair::generate();
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::generate();
         let link = generate_data(&conn, &public_key)?;
         let new_kv = NewKVChain::for_persona(&conn, &public_key)?;
 

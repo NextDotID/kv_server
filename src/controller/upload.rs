@@ -54,10 +54,7 @@ mod tests {
     use crate::{
         controller::query::QueryResponse,
         crypto::util::compress_public_key,
-        model::{
-            establish_connection,
-            kv::{self, KV},
-        },
+        model::{establish_connection, kv},
         util::vec_to_base64,
     };
     use fake::{Fake, Faker};
