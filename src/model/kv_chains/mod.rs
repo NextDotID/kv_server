@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key},
+    crypto::{secp256k1::Secp256k1KeyPair, util::hex_public_key},
     error::Error,
     model::{establish_connection, kv::KV},
     schema::{kv_chains, kv_chains::dsl::*},
@@ -42,6 +42,17 @@ pub struct NewKVChain {
     pub previous_id: Option<i32>,
     pub signature: Vec<u8>,
     pub signature_payload: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SignPayload {
+    pub version: String,
+    pub uuid: Uuid,
+    pub persona: String,
+    pub platform: String,
+    pub identity: String,
+    pub patch: serde_json::Value,
+    pub previous: Option<String>,
 }
 
 impl NewKVChain {
@@ -87,17 +98,17 @@ impl NewKVChain {
             previous_sig = Some(vec_to_base64(&prev_kv_sig_bytes));
         }
 
-        let body: serde_json::Value = json!({
-            "version": "1",
-            "uuid": self.uuid.to_string(),
-            "persona": compress_public_key(&self.public_key()),
-            "platform": self.platform,
-            "identity": self.identity,
-            "patch": self.patch,
-            "previous": previous_sig,
-        });
+        let sign_body = SignPayload {
+            version: "1".into(),
+            uuid: self.uuid.clone(),
+            persona: hex_public_key(&self.public_key()),
+            platform: self.platform.clone(),
+            identity: self.identity.clone(),
+            patch: self.patch.clone(),
+            previous: previous_sig,
+        };
 
-        let body_string = serde_json::to_string(&body).unwrap();
+        let body_string = serde_json::to_string(&sign_body).unwrap();
         Ok(body_string)
     }
 
@@ -112,8 +123,10 @@ impl NewKVChain {
     /// `self.signature_payload` as signature body, so make sure it is
     /// prepared before calling this.
     pub fn validate(&self) -> Result<(), Error> {
-        let recovered_pk =
-            Secp256k1KeyPair::recover_from_personal_signature(&self.signature, &self.signature_payload)?;
+        let recovered_pk = Secp256k1KeyPair::recover_from_personal_signature(
+            &self.signature,
+            &self.signature_payload,
+        )?;
 
         if recovered_pk != self.public_key() {
             Err(Error::SignatureValidationError(

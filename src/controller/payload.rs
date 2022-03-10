@@ -52,7 +52,7 @@ mod tests {
     use serde_json::json;
 
     use crate::{
-        crypto::util::compress_public_key, model::kv_chains::KVChain, schema::kv_chains::dsl::*,
+        crypto::util::{compress_public_key, hex_public_key}, model::kv_chains::KVChain, schema::kv_chains::dsl::*,
         util::vec_to_base64,
     };
 
@@ -100,7 +100,7 @@ mod tests {
         let body: PayloadResponse = serde_json::from_str(resp.body()).unwrap();
         assert!(body.uuid.len() > 0);
         let payload = body.sign_payload;
-        assert!(payload.contains(&compress_public_key(&public_key)));
+        assert!(payload.contains(&hex_public_key(&public_key)));
         assert!(payload.contains(r#""test":"abc""#));
         assert!(payload.contains("facebook"));
         assert!(payload.contains(&req_body.identity));
