@@ -26,6 +26,9 @@ pub struct KVChain {
     pub patch: serde_json::Value,
     pub previous_id: Option<i32>,
     pub signature: Vec<u8>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+    pub signature_payload: String,
 }
 
 #[derive(Insertable, Clone, Debug)]
@@ -38,6 +41,7 @@ pub struct NewKVChain {
     pub patch: serde_json::Value,
     pub previous_id: Option<i32>,
     pub signature: Vec<u8>,
+    pub signature_payload: String,
 }
 
 impl NewKVChain {
@@ -61,6 +65,7 @@ impl NewKVChain {
                 None
             },
             signature: vec![],
+            signature_payload: "".into(),
         })
     }
 
@@ -70,7 +75,7 @@ impl NewKVChain {
     }
 
     /// Generate signature body for this KVChain request.
-    pub fn sign_body(&self) -> Result<String, Error> {
+    pub fn generate_signature_payload(&self) -> Result<String, Error> {
         let mut previous_sig: Option<String> = None;
         if let Some(prev_id) = self.previous_id {
             let conn = establish_connection();
@@ -92,21 +97,23 @@ impl NewKVChain {
             "previous": previous_sig,
         });
 
-        Ok(serde_json::to_string(&body).unwrap())
+        let body_string = serde_json::to_string(&body).unwrap();
+        Ok(body_string)
     }
 
     /// Generate a signature using given keypair.
     /// For development and test only.
     pub fn sign(&self, keypair: &Secp256k1KeyPair) -> Result<Vec<u8>, Error> {
-        let body = self.sign_body()?;
+        let body = self.generate_signature_payload()?;
         keypair.personal_sign(&body)
     }
 
-    /// Validate if this KVChain has valid signature
+    /// Validate if this KVChain has valid signature.  It'll read
+    /// `self.signature_payload` as signature body, so make sure it is
+    /// prepared before calling this.
     pub fn validate(&self) -> Result<(), Error> {
-        let sign_body = self.sign_body()?;
         let recovered_pk =
-            Secp256k1KeyPair::recover_from_personal_signature(&self.signature, &sign_body)?;
+            Secp256k1KeyPair::recover_from_personal_signature(&self.signature, &self.signature_payload)?;
 
         if recovered_pk != self.public_key() {
             Err(Error::SignatureValidationError(

@@ -34,6 +34,7 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     new_kv.signature = sig;
     new_kv.patch = req.patch.clone();
     new_kv.uuid = uuid;
+    new_kv.signature_payload = new_kv.generate_signature_payload()?;
 
     // Validate signature
     new_kv.validate()?;
@@ -53,7 +54,7 @@ mod tests {
     use super::*;
     use crate::{
         controller::query::QueryResponse,
-        crypto::util::compress_public_key,
+        crypto::util::{compress_public_key, hex_public_key},
         model::{establish_connection, kv},
         util::vec_to_base64,
     };
@@ -72,6 +73,7 @@ mod tests {
             patch: json!({"test": "abc"}),
             previous_id: None,
             signature: vec![],
+            signature_payload: "".into(),
         };
         new_kv_chain.signature = new_kv_chain.sign(&keypair).unwrap();
 
@@ -93,7 +95,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::CREATED);
         let resp_body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(1, resp_body.proofs.len());
-        assert_eq!(compress_public_key(&keypair.public_key), resp_body.persona);
+        assert_eq!(format!("0x{}", hex_public_key(&keypair.public_key)), resp_body.persona);
         assert_eq!(
             new_kv_chain.platform,
             resp_body.proofs.first().unwrap().platform
@@ -124,6 +126,7 @@ mod tests {
             patch: json!({"test": null, "test2": "new kv"}),
             previous_id: None,
             signature: vec![],
+            signature_payload: "".into(),
         };
         let sig = new_kv_chain.sign(&keypair).unwrap();
         new_kv_chain.signature = sig;

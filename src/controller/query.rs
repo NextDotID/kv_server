@@ -65,10 +65,7 @@ pub fn query_response(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::{
-        secp256k1::Secp256k1KeyPair,
-        util::{compress_public_key, hex_public_key},
-    };
+    use crate::crypto::{secp256k1::Secp256k1KeyPair, util::hex_public_key};
     use fake::Fake;
     use http::Method;
     use serde_json::json;
@@ -79,7 +76,7 @@ mod tests {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let pubkey_hex = compress_public_key(&public_key);
+        let pubkey_hex = hex_public_key(&public_key);
         let req: Request = ::http::Request::builder()
             .method(Method::GET)
             .uri(format!("http://localhost/test?persona={}", pubkey_hex))
@@ -89,7 +86,7 @@ mod tests {
         let resp = controller(req).await.unwrap();
         let body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(0, body.proofs.len());
-        assert_eq!(pubkey_hex, body.persona);
+        assert_eq!(format!("0x{}", pubkey_hex), body.persona);
     }
 
     #[tokio::test]
@@ -112,10 +109,7 @@ mod tests {
         let resp = controller(req).await.unwrap();
         let body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(1, body.proofs.len());
-        assert_eq!(
-            format!("0x{}", compress_public_key(&public_key)),
-            body.persona
-        );
+        assert_eq!(format!("0x{}", hex_public_key(&public_key)), body.persona);
         assert_eq!("twitter", body.proofs.first().unwrap().platform);
         assert_eq!(json!({}), body.proofs.first().unwrap().content);
     }

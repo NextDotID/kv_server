@@ -33,8 +33,9 @@ serde_json = "1.0"
 json-patch = "*"
 
 # diesel `uuidv07` feature is bound tight with `uuid` v0.7.x
-diesel = { version = "1.4", features = ["postgres", "uuidv07", "r2d2", "serde_json"] }
+diesel = { version = "1.4", features = ["postgres", "uuidv07", "r2d2", "serde_json", "chrono"] }
 uuid = { version = "0.7", features = ["serde", "v4"] }
+chrono = "0.4"
 
 # crypto
 rand = "0.8"

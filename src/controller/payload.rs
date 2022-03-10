@@ -32,7 +32,7 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
     new_kvchain.platform = params.platform;
     new_kvchain.identity = params.identity;
     new_kvchain.patch = params.patch;
-    let sign_payload = new_kvchain.sign_body()?;
+    let sign_payload = new_kvchain.generate_signature_payload()?;
 
     Ok(json_response(
         StatusCode::OK,
@@ -72,6 +72,7 @@ mod tests {
                 patch: json!({ "test": "abc" }),
                 previous_id: None,
                 signature: vec![1],
+                signature_payload: "".into(),
             })
             .get_result(conn)
             .map_err(|e| e.into())

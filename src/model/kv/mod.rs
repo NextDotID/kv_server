@@ -18,6 +18,8 @@ pub struct KV {
     pub identity: String,
     pub content: serde_json::Value,
     pub persona: Vec<u8>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Insertable, Debug)]
