@@ -1,5 +1,5 @@
 use libsecp256k1::PublicKey;
-use sha3::{Keccak256, Digest};
+use sha3::{Digest, Keccak256};
 
 /// Returns compressed public key (in hexstring, without `0x`).
 pub fn compress_public_key(pk: &PublicKey) -> String {

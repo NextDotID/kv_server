@@ -1,16 +1,15 @@
-use crate::error::Error;
 use crate::controller::{
-    healthz, error_response,
-    Request as OurRequest,
+    error_response, healthz, payload, query, Body as OurBody, Request as OurRequest,
     Response as OurResponse,
-    Body as OurBody, query, payload,
 };
+use crate::error::Error;
 use http::{Method, StatusCode};
-use std::future::Future;
 use lambda_http::{
-    Body as LambdaBody, Error as LambdaError, IntoResponse, Request as LambdaRequest, Response as LambdaResponse,
+    Body as LambdaBody, Error as LambdaError, IntoResponse, Request as LambdaRequest,
+    Response as LambdaResponse,
 };
 use log::info;
+use std::future::Future;
 
 /// Translate between `lambda_http` `Body` and our `Body`.
 async fn parse<F>(req: LambdaRequest, controller: fn(OurRequest) -> F) -> LambdaResponse<LambdaBody>
@@ -26,7 +25,7 @@ where
             let (parts, our_resp) = resp.into_parts();
             let resp = lambda_http::Body::Text(our_resp);
             LambdaResponse::from_parts(parts, resp)
-        },
+        }
         Err(err) => {
             let (parts, our_resp) = error_response(err).into_parts();
             let resp = lambda_http::Body::Text(our_resp);
@@ -48,7 +47,6 @@ pub async fn entrypoint(req: LambdaRequest) -> Result<impl IntoResponse, LambdaE
         (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
         (&Method::POST, "/v1/kv/payload") => parse(req, payload::controller).await,
         // (&Method::POST, "/upload") => parse(req, upload::controller).await,
-
         _ => LambdaResponse::builder()
             .status(StatusCode::NOT_FOUND)
             .body("Not Found".into())

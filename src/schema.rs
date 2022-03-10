@@ -22,7 +22,4 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
-    kv,
-    kv_chains,
-);
+allow_tables_to_appear_in_same_query!(kv, kv_chains,);

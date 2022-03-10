@@ -1,8 +1,9 @@
 use crate::{
-    controller::{Request, Response, json_parse_body, json_response},
+    controller::{json_parse_body, json_response, Request, Response},
     crypto::secp256k1::Secp256k1KeyPair,
     error::Error,
-    model::{establish_connection, kv_chains::NewKVChain}, proof_client::can_set_kv,
+    model::{establish_connection, kv_chains::NewKVChain},
+    proof_client::can_set_kv,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -33,21 +34,27 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
     new_kvchain.patch = params.patch;
     let sign_payload = new_kvchain.sign_body()?;
 
-    Ok(json_response(StatusCode::OK, &PayloadResponse{
-        sign_payload,
-        uuid: new_kvchain.uuid.to_string(),
-    })?)
+    Ok(json_response(
+        StatusCode::OK,
+        &PayloadResponse {
+            sign_payload,
+            uuid: new_kvchain.uuid.to_string(),
+        },
+    )?)
 }
 
 #[cfg(test)]
 mod tests {
-    use diesel::{PgConnection, insert_into, RunQueryDsl};
-    use fake::{Faker, Fake};
+    use diesel::{insert_into, PgConnection, RunQueryDsl};
+    use fake::{Fake, Faker};
     use http::Method;
     use libsecp256k1::PublicKey;
     use serde_json::json;
 
-    use crate::{crypto::util::compress_public_key, model::kv_chains::KVChain, schema::kv_chains::dsl::*, util::vec_to_base64};
+    use crate::{
+        crypto::util::compress_public_key, model::kv_chains::KVChain, schema::kv_chains::dsl::*,
+        util::vec_to_base64,
+    };
 
     use super::*;
 
@@ -72,9 +79,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_success() {
-        let Secp256k1KeyPair { public_key, secret_key: _ } = Secp256k1KeyPair::generate();
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::generate();
 
-        let req_body = PayloadRequest{
+        let req_body = PayloadRequest {
             persona: compress_public_key(&public_key),
             platform: "facebook".into(),
             identity: Faker.fake(),
@@ -82,8 +92,8 @@ mod tests {
         };
         let req: Request = ::http::Request::builder()
             .method(Method::POST)
-            .uri(format!("http://localhost?test")).
-            body(serde_json::to_string(&req_body).unwrap())
+            .uri(format!("http://localhost?test"))
+            .body(serde_json::to_string(&req_body).unwrap())
             .unwrap();
         let resp = controller(req).await.unwrap();
         let body: PayloadResponse = serde_json::from_str(resp.body()).unwrap();
@@ -99,10 +109,13 @@ mod tests {
     #[tokio::test]
     async fn test_with_previous() {
         let conn = establish_connection();
-        let Secp256k1KeyPair { public_key, secret_key: _ } = Secp256k1KeyPair::generate();
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::generate();
         let old_kv_chain = generate_data(&conn, &public_key).unwrap();
 
-        let req_body = PayloadRequest{
+        let req_body = PayloadRequest {
             persona: compress_public_key(&public_key),
             platform: "facebook".into(),
             identity: Faker.fake(),
@@ -110,8 +123,8 @@ mod tests {
         };
         let req: Request = ::http::Request::builder()
             .method(Method::POST)
-            .uri(format!("http://localhost?test")).
-            body(serde_json::to_string(&req_body).unwrap())
+            .uri(format!("http://localhost?test"))
+            .body(serde_json::to_string(&req_body).unwrap())
             .unwrap();
         let resp = controller(req).await.unwrap();
         let body: PayloadResponse = serde_json::from_str(resp.body()).unwrap();

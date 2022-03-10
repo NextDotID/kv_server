@@ -1,6 +1,6 @@
 mod tests;
 
-use crate::{error::Error, crypto::secp256k1::Secp256k1KeyPair};
+use crate::{crypto::secp256k1::Secp256k1KeyPair, error::Error};
 use http::{Response, StatusCode};
 use hyper::{body::HttpBody as _, client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
@@ -80,7 +80,7 @@ pub async fn can_set_kv(
 ) -> Result<(), Error> {
     // FIXME: super stupid test stub
     if cfg!(test) {
-        return Ok(())
+        return Ok(());
     }
     // KV of NextID: validate if identity == persona.
     if *platform == "nextid".to_string() {

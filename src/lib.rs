@@ -6,9 +6,9 @@ extern crate diesel;
 
 pub mod config;
 pub mod controller;
+pub mod crypto;
 pub mod error;
 pub mod model;
-mod schema;
-pub mod crypto;
-pub mod util;
 pub mod proof_client;
+mod schema;
+pub mod util;

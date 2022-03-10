@@ -93,11 +93,7 @@ impl KVConfig {
     pub fn database_url(&self) -> String {
         format!(
             "postgres://{}:{}@{}:{}/{}",
-            self.db.username,
-            self.db.password,
-            self.db.host,
-            self.db.port,
-            self.db.db,
+            self.db.username, self.db.password, self.db.host, self.db.port, self.db.db,
         )
     }
 }

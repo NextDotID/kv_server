@@ -1,7 +1,8 @@
 use crate::{
     controller::{query_parse, Request, Response},
+    crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key},
     error::Error,
-    model::{establish_connection, kv}, crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key},
+    model::{establish_connection, kv},
 };
 use diesel::PgConnection;
 use http::StatusCode;
@@ -28,7 +29,10 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
     let persona_hex = params
         .get("persona")
         .ok_or(Error::ParamMissing("persona".into()))?;
-    let Secp256k1KeyPair { public_key, secret_key: _} = Secp256k1KeyPair::from_pubkey_hex(persona_hex)?;
+    let Secp256k1KeyPair {
+        public_key,
+        secret_key: _,
+    } = Secp256k1KeyPair::from_pubkey_hex(persona_hex)?;
 
     let conn = establish_connection();
     let response = query_response(&conn, &public_key)?;
@@ -36,7 +40,10 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
     json_response(StatusCode::OK, &response)
 }
 
-pub fn query_response(conn: &PgConnection, persona_public_key: &PublicKey) -> Result<QueryResponse, Error> {
+pub fn query_response(
+    conn: &PgConnection,
+    persona_public_key: &PublicKey,
+) -> Result<QueryResponse, Error> {
     let results = kv::find_all_by_persona(&conn, persona_public_key)?;
 
     let persona_hex = compress_public_key(persona_public_key);
@@ -93,7 +100,10 @@ mod tests {
 
         let req: Request = ::http::Request::builder()
             .method(Method::GET)
-            .uri(format!("http://localhost/test?persona={}", compress_public_key(&public_key)))
+            .uri(format!(
+                "http://localhost/test?persona={}",
+                compress_public_key(&public_key)
+            ))
             .body("".into())
             .unwrap();
         let resp = controller(req).await.unwrap();
