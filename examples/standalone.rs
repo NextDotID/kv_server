@@ -1,7 +1,3 @@
-use std::convert::Infallible;
-use std::future::Future;
-use std::net::SocketAddr;
-
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{
     Body as HyperBody,
@@ -12,9 +8,14 @@ use hyper::{
     Server,
     StatusCode,
 };
-use kv_server::controller::{error_response, healthz, query, Body, Request, Response};
+use kv_server::controller::{
+    error_response, healthz, payload, query, upload, Body, Request, Response,
+};
 use kv_server::{config::C, error::Error};
 use log::info;
+use std::convert::Infallible;
+use std::future::Future;
+use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
@@ -41,7 +42,8 @@ async fn entrypoint(req: HyperRequest<HyperBody>) -> Result<HyperResponse<HyperB
     Ok(match (req.method(), req.uri().path()) {
         (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
         (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
-        // (&Method::POST, "/upload") => parse(req, upload::controller).await,
+        (&Method::POST, "/v1/kv/payload") => parse(req, payload::controller).await,
+        (&Method::POST, "/v1/kv") => parse(req, upload::controller).await,
         _ => HyperResponse::builder()
             .status(StatusCode::NOT_FOUND)
             .body("Not Found".into())

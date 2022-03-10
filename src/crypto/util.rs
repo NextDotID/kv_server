@@ -7,6 +7,11 @@ pub fn compress_public_key(pk: &PublicKey) -> String {
     hex::encode(compressed)
 }
 
+/// Serialize uncompressed public key (in hexstring, without `0x`).
+pub fn hex_public_key(pk: &PublicKey) -> String {
+    hex::encode(pk.serialize())
+}
+
 /// Keccak256(message)
 /// # Example
 ///

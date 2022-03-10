@@ -1,6 +1,6 @@
 use crate::{
     controller::{query_parse, Request, Response},
-    crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key},
+    crypto::{secp256k1::Secp256k1KeyPair, util::hex_public_key},
     error::Error,
     model::{establish_connection, kv},
 };
@@ -46,9 +46,9 @@ pub fn query_response(
 ) -> Result<QueryResponse, Error> {
     let results = kv::find_all_by_persona(&conn, persona_public_key)?;
 
-    let persona_hex = compress_public_key(persona_public_key);
+    let persona_hex = hex_public_key(persona_public_key);
     let mut response = QueryResponse {
-        persona: persona_hex,
+        persona: format!("0x{}", persona_hex),
         proofs: vec![],
     };
     for proof in results.iter() {
@@ -65,7 +65,10 @@ pub fn query_response(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::{secp256k1::Secp256k1KeyPair, util::compress_public_key};
+    use crate::crypto::{
+        secp256k1::Secp256k1KeyPair,
+        util::{compress_public_key, hex_public_key},
+    };
     use fake::Fake;
     use http::Method;
     use serde_json::json;
@@ -101,15 +104,18 @@ mod tests {
         let req: Request = ::http::Request::builder()
             .method(Method::GET)
             .uri(format!(
-                "http://localhost/test?persona={}",
-                compress_public_key(&public_key)
+                "http://localhost/test?persona=0x{}",
+                hex_public_key(&public_key)
             ))
             .body("".into())
             .unwrap();
         let resp = controller(req).await.unwrap();
         let body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(1, body.proofs.len());
-        assert_eq!(compress_public_key(&public_key), body.persona);
+        assert_eq!(
+            format!("0x{}", compress_public_key(&public_key)),
+            body.persona
+        );
         assert_eq!("twitter", body.proofs.first().unwrap().platform);
         assert_eq!(json!({}), body.proofs.first().unwrap().content);
     }

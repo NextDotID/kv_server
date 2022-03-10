@@ -1,5 +1,5 @@
 use crate::controller::{
-    error_response, healthz, payload, query, Body as OurBody, Request as OurRequest,
+    error_response, healthz, payload, query, upload, Body as OurBody, Request as OurRequest,
     Response as OurResponse,
 };
 use crate::error::Error;
@@ -46,7 +46,7 @@ pub async fn entrypoint(req: LambdaRequest) -> Result<impl IntoResponse, LambdaE
         (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
         (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
         (&Method::POST, "/v1/kv/payload") => parse(req, payload::controller).await,
-        // (&Method::POST, "/upload") => parse(req, upload::controller).await,
+        (&Method::POST, "/v1/kv") => parse(req, upload::controller).await,
         _ => LambdaResponse::builder()
             .status(StatusCode::NOT_FOUND)
             .body("Not Found".into())

@@ -40,7 +40,7 @@ for Rust.
 
   + Attributes (object)
 
-     + persona (string, required) - Persona public key (hexstring started with `0x`).
+     + persona (string, required) - Persona public key (uncomressed hexstring started with `0x`).
      + proofs (array[object], required) - All proofs belong to this persona
           + platform (string, required) - Platform (incl. `nextid`, which means public key itself).
           + identity (string, required) - Identity.
@@ -79,7 +79,7 @@ Persona not found (no KV was ever created).
 
   + Attributes (object)
 
-    + persona (string, required) - Persona public key.
+    + persona (string, required) - Persona public key (both comressed / uncompressed and with/without `0x` are OK).
     + platform (string, required) - Platform (incl. `nextid`, which means public key itself).
     + identity (string, required) - Identity.
     + patch (object, required) - Patch to current data
