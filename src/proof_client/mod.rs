@@ -1,9 +1,10 @@
 mod tests;
 
-use crate::error::Error;
-use http::Response;
+use crate::{error::Error, crypto::secp256k1::Secp256k1KeyPair};
+use http::{Response, StatusCode};
 use hyper::{body::HttpBody as _, client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
+use libsecp256k1::PublicKey;
 use serde::Deserialize;
 
 /// https://github.com/nextdotid/proof-server/blob/master/docs/api.apib
@@ -30,7 +31,7 @@ pub struct Proof {
 
 #[derive(Deserialize, Debug)]
 pub struct ErrorResponse {
-    pub message: String
+    pub message: String,
 }
 
 pub fn make_client() -> Client<HttpsConnector<HttpConnector>> {
@@ -69,4 +70,68 @@ pub async fn query(base: &str, persona: &str) -> Result<ProofQueryResponse, Erro
     }
     let body: ProofQueryResponse = parse_body(&mut resp).await?;
     Ok(body)
+}
+
+/// Determine if persona-platform-identity pair can set a KV.
+pub async fn can_set_kv(
+    persona_pubkey: &PublicKey,
+    platform: &String,
+    identity: &String,
+) -> Result<(), Error> {
+    // FIXME: super stupid test stub
+    if cfg!(test) {
+        return Ok(())
+    }
+    // KV of NextID: validate if identity == persona.
+    if *platform == "nextid".to_string() {
+        let Secp256k1KeyPair {
+            public_key: identity_pubkey,
+            secret_key: _,
+        } = Secp256k1KeyPair::from_pubkey_hex(&identity)?;
+        if identity_pubkey == *persona_pubkey {
+            return Ok(());
+        } else {
+            return Err(Error::General(
+                format!("Identity and persona not match when 'platform' is 'nextid' ."),
+                StatusCode::BAD_REQUEST,
+            ));
+        }
+    }
+    // Else: connect to ProofService
+    let persona_full_hex = format!("0x{}", hex::encode(persona_pubkey.serialize()));
+    let query_response = query(&crate::config::C.proof_service.url, &persona_full_hex).await?;
+    if query_response.ids.len() == 0 {
+        return Err(Error::General(
+            format!(
+                "Persona not found found on ProofService: {}",
+                persona_full_hex
+            ),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    // FIXME: maybe no need to iter like this.
+    let persona_found = query_response
+        .ids
+        .iter()
+        .find(|id| id.persona == persona_full_hex)
+        .ok_or_else(|| {
+            Error::General(
+                format!("Persona not found on ProofService: {}", persona_full_hex),
+                StatusCode::BAD_REQUEST,
+            )
+        })?;
+
+    let _proof_found = persona_found
+        .proofs
+        .iter()
+        .find(|proof| proof.platform == *platform && proof.identity == *identity)
+        .ok_or_else(|| {
+            Error::General(
+                format!("Proof not found under this persona."),
+                StatusCode::BAD_REQUEST,
+            )
+        })?;
+
+    Ok(())
 }

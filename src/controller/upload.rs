@@ -6,7 +6,7 @@ use crate::{
     crypto::secp256k1::Secp256k1KeyPair,
     error::Error,
     model::{self, kv_chains::NewKVChain},
-    util::base64_to_vec,
+    util::base64_to_vec, proof_client::can_set_kv,
 };
 
 use super::{json_response, query::query_response};
@@ -26,6 +26,7 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     let sig = base64_to_vec(&req.signature)?;
     let persona = Secp256k1KeyPair::from_pubkey_hex(&req.persona)?;
     let uuid = uuid::Uuid::parse_str(&req.uuid)?;
+    can_set_kv(&persona.public_key, &req.platform, &req.identity).await?;
 
     let conn = model::establish_connection();
     let mut new_kv = NewKVChain::for_persona(&conn, &persona.public_key)?;

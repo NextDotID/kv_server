@@ -2,7 +2,7 @@ use crate::{
     controller::{Request, Response, json_parse_body, json_response},
     crypto::secp256k1::Secp256k1KeyPair,
     error::Error,
-    model::{establish_connection, kv_chains::NewKVChain},
+    model::{establish_connection, kv_chains::NewKVChain}, proof_client::can_set_kv,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -24,6 +24,7 @@ struct PayloadResponse {
 pub async fn controller(req: Request) -> Result<Response, Error> {
     let params: PayloadRequest = json_parse_body(&req)?;
     let keypair = Secp256k1KeyPair::from_pubkey_hex(&params.persona)?;
+    can_set_kv(&keypair.public_key, &params.platform, &params.identity).await?;
     let conn = establish_connection();
     let mut new_kvchain = NewKVChain::for_persona(&conn, &keypair.public_key)?;
 
