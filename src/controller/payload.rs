@@ -20,6 +20,7 @@ struct PayloadRequest {
 struct PayloadResponse {
     pub uuid: String,
     pub sign_payload: String,
+    pub created_at: i64,
 }
 
 pub async fn controller(req: Request) -> Result<Response, Error> {
@@ -37,8 +38,9 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
     Ok(json_response(
         StatusCode::OK,
         &PayloadResponse {
-            sign_payload,
-            uuid: new_kvchain.uuid.to_string(),
+            sign_payload: serde_json::to_string(&sign_payload)?,
+            uuid: sign_payload.uuid.to_string(),
+            created_at: sign_payload.created_at,
         },
     )?)
 }
@@ -53,7 +55,7 @@ mod tests {
 
     use crate::{
         crypto::util::{compress_public_key, hex_public_key}, model::kv_chains::KVChain, schema::kv_chains::dsl::*,
-        util::vec_to_base64,
+        util::{vec_to_base64, naive_now},
     };
 
     use super::*;
@@ -73,6 +75,7 @@ mod tests {
                 previous_id: None,
                 signature: vec![1],
                 signature_payload: "".into(),
+                created_at: naive_now(),
             })
             .get_result(conn)
             .map_err(|e| e.into())

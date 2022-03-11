@@ -1,6 +1,7 @@
 mod tests;
 
 use ::uuid::Uuid;
+use chrono::NaiveDateTime;
 use diesel::{insert_into, prelude::*, PgConnection};
 use libsecp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,7 @@ use crate::{
     error::Error,
     model::{establish_connection, kv::KV},
     schema::{kv_chains, kv_chains::dsl::*},
-    util::vec_to_base64,
+    util::{timestamp, vec_to_base64, naive_now},
 };
 
 #[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, Debug)]
@@ -26,8 +27,8 @@ pub struct KVChain {
     pub patch: serde_json::Value,
     pub previous_id: Option<i32>,
     pub signature: Vec<u8>,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
     pub signature_payload: String,
 }
 
@@ -42,6 +43,7 @@ pub struct NewKVChain {
     pub previous_id: Option<i32>,
     pub signature: Vec<u8>,
     pub signature_payload: String,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -52,6 +54,7 @@ pub struct SignPayload {
     pub platform: String,
     pub identity: String,
     pub patch: serde_json::Value,
+    pub created_at: i64,
     pub previous: Option<String>,
 }
 
@@ -77,6 +80,7 @@ impl NewKVChain {
             },
             signature: vec![],
             signature_payload: "".into(),
+            created_at: naive_now(),
         })
     }
 
@@ -86,7 +90,7 @@ impl NewKVChain {
     }
 
     /// Generate signature body for this KVChain request.
-    pub fn generate_signature_payload(&self) -> Result<String, Error> {
+    pub fn generate_signature_payload(&self) -> Result<SignPayload, Error> {
         let mut previous_sig: Option<String> = None;
         if let Some(prev_id) = self.previous_id {
             let conn = establish_connection();
@@ -98,7 +102,7 @@ impl NewKVChain {
             previous_sig = Some(vec_to_base64(&prev_kv_sig_bytes));
         }
 
-        let sign_body = SignPayload {
+        Ok(SignPayload {
             version: "1".into(),
             uuid: self.uuid.clone(),
             persona: hex_public_key(&self.public_key()),
@@ -106,17 +110,15 @@ impl NewKVChain {
             identity: self.identity.clone(),
             patch: self.patch.clone(),
             previous: previous_sig,
-        };
-
-        let body_string = serde_json::to_string(&sign_body).unwrap();
-        Ok(body_string)
+            created_at: timestamp(),
+        })
     }
 
     /// Generate a signature using given keypair.
     /// For development and test only.
     pub fn sign(&self, keypair: &Secp256k1KeyPair) -> Result<Vec<u8>, Error> {
         let body = self.generate_signature_payload()?;
-        keypair.personal_sign(&body)
+        keypair.personal_sign(&serde_json::to_string(&body).unwrap())
     }
 
     /// Validate if this KVChain has valid signature.  It'll read

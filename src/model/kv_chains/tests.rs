@@ -13,7 +13,7 @@ mod tests {
             kv_chains::{KVChain, NewKVChain},
         },
         schema::kv_chains::dsl::*,
-        util::vec_to_base64,
+        util::{vec_to_base64, naive_now},
     };
 
     fn before_each(connection: &PgConnection) -> Result<(), Error> {
@@ -39,6 +39,7 @@ mod tests {
                 previous_id: None,
                 signature: vec![1],
                 signature_payload: "".into(),
+                created_at: naive_now(),
             })
             .get_result(conn)
             .map_err(|e| e.into())
@@ -80,6 +81,7 @@ mod tests {
             previous_id: Some(link.id),
             signature: vec![2],
             signature_payload: "".into(),
+            created_at: naive_now(),
         };
         let new_link = new_kvchain.finalize(&conn)?;
         assert_eq!(new_link.previous_id.unwrap(), link.id);
@@ -116,8 +118,8 @@ mod tests {
         let new_kv = NewKVChain::for_persona(&conn, &public_key)?;
 
         let sign_body = new_kv.generate_signature_payload()?;
-        assert!(sign_body.contains(&vec_to_base64(&link.signature)));
-        assert!(sign_body.contains(&format!("{}", new_kv.uuid.to_string())));
+        assert!(sign_body.previous.unwrap() == vec_to_base64(&link.signature));
+        assert!(sign_body.uuid == new_kv.uuid);
         Ok(())
     }
 
@@ -134,7 +136,7 @@ mod tests {
 
         let sig = new_kv.sign(&keypair)?;
         new_kv.signature = sig;
-        new_kv.signature_payload = new_kv.generate_signature_payload()?;
+        new_kv.signature_payload = serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
         assert!(new_kv.validate().is_ok());
 
         Ok(())

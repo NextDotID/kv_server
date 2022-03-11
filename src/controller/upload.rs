@@ -5,7 +5,7 @@ use crate::{
     error::Error,
     model::{self, kv_chains::NewKVChain},
     proof_client::can_set_kv,
-    util::base64_to_vec,
+    util::{base64_to_vec, timestamp_to_naive},
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,7 @@ struct UploadRequest {
     pub identity: String,
     pub signature: String,
     pub uuid: String,
+    pub created_at: i64,
     pub patch: serde_json::Value,
 }
 
@@ -34,7 +35,8 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     new_kv.signature = sig;
     new_kv.patch = req.patch.clone();
     new_kv.uuid = uuid;
-    new_kv.signature_payload = new_kv.generate_signature_payload()?;
+    new_kv.created_at = timestamp_to_naive(req.created_at);
+    new_kv.signature_payload = serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
 
     // Validate signature
     new_kv.validate()?;
@@ -56,7 +58,7 @@ mod tests {
         controller::query::QueryResponse,
         crypto::util::{compress_public_key, hex_public_key},
         model::{establish_connection, kv},
-        util::vec_to_base64,
+        util::{vec_to_base64, naive_now},
     };
     use fake::{Fake, Faker};
     use http::Method;
@@ -74,6 +76,7 @@ mod tests {
             previous_id: None,
             signature: vec![],
             signature_payload: "".into(),
+            created_at: naive_now(),
         };
         new_kv_chain.signature = new_kv_chain.sign(&keypair).unwrap();
 
@@ -84,6 +87,7 @@ mod tests {
             signature: vec_to_base64(&new_kv_chain.signature),
             uuid: new_kv_chain.uuid.to_string(),
             patch: new_kv_chain.patch.clone(),
+            created_at: new_kv_chain.created_at.timestamp(),
         };
         let req: Request = ::http::Request::builder()
             .method(Method::POST)
@@ -127,6 +131,7 @@ mod tests {
             previous_id: None,
             signature: vec![],
             signature_payload: "".into(),
+            created_at: naive_now(),
         };
         let sig = new_kv_chain.sign(&keypair).unwrap();
         new_kv_chain.signature = sig;
@@ -138,6 +143,7 @@ mod tests {
             signature: vec_to_base64(&new_kv_chain.signature),
             uuid: new_kv_chain.uuid.to_string(),
             patch: new_kv_chain.patch.clone(),
+            created_at: new_kv_chain.created_at.timestamp(),
         };
         let req: Request = ::http::Request::builder()
             .method(Method::POST)
