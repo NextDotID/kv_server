@@ -78,7 +78,7 @@ pub fn parse() -> Result<KVConfig, Error> {
                 .required(false),
         )
         // runtime-ENV-based config
-        .add_source(config::Environment::with_prefix("KV").separator("_"))
+        .add_source(config::Environment::with_prefix("KV").separator("__").ignore_empty(true))
         .build()?;
 
     s.try_deserialize().map_err(|e| e.into())
