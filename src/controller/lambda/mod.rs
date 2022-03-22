@@ -43,10 +43,10 @@ pub async fn entrypoint(req: LambdaRequest) -> Result<impl IntoResponse, LambdaE
     );
 
     Ok(match (req.method(), req.uri().path()) {
-        (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
-        (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
-        (&Method::POST, "/v1/kv/payload") => parse(req, payload::controller).await,
-        (&Method::POST, "/v1/kv") => parse(req, upload::controller).await,
+        (&Method::GET, "/api/healthz") => parse(req, healthz::controller).await,
+        (&Method::GET, "/api/v1/kv") => parse(req, query::controller).await,
+        (&Method::POST, "/api/v1/kv/payload") => parse(req, payload::controller).await,
+        (&Method::POST, "/api/v1/kv") => parse(req, upload::controller).await,
         _ => LambdaResponse::builder()
             .status(StatusCode::NOT_FOUND)
             .body("Not Found".into())
