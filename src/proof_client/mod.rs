@@ -103,7 +103,7 @@ pub async fn can_set_kv(
     if query_response.ids.len() == 0 {
         return Err(Error::General(
             format!(
-                "Persona not found found on ProofService: {}",
+                "Persona not found on ProofService: {}",
                 persona_full_hex
             ),
             StatusCode::BAD_REQUEST,
