@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate diesel_migrations;
+
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{
     Body as HyperBody,
@@ -11,15 +14,21 @@ use hyper::{
 use kv_server::controller::{
     error_response, healthz, payload, query, upload, Body, Request, Response,
 };
+use kv_server::model;
 use kv_server::{config::C, error::Error};
 use log::info;
 use std::convert::Infallible;
 use std::future::Future;
 use std::net::SocketAddr;
 
+embed_migrations!("./migrations");
+
 #[tokio::main]
 async fn main() {
+    env_logger::try_init().unwrap();
     let config = C.clone(); // TODO
+    embedded_migrations::run(&model::establish_connection()).unwrap();
+
     let addr: SocketAddr = format!("{}:{}", config.web.listen, config.web.port)
         .parse()
         .expect("Unable to parse web listen address");
