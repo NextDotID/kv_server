@@ -71,7 +71,7 @@ pub fn app_env() -> ENV {
 pub fn parse() -> Result<KVConfig, Error> {
     let s = Config::builder()
         // Default
-        .add_source(config::File::with_name(CONFIG_FILE_PATH))
+        .add_source(config::File::with_name(CONFIG_FILE_PATH).required(false))
         // app-env-based config
         .add_source(
             config::File::with_name(&format!("{}{}.toml", CONFIG_FILE_PATH_PREFIX, app_env()))
