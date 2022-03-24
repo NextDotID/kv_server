@@ -9,11 +9,11 @@
 This lambda function / standalone server implements simple KV storage
 for each single entity in [[https://github.com/nextdotid/proof-server][proof-server]].
 
-* [0/3] Goal
+* Goal [3/3]
 :PROPERTIES:
 :ID:       5f4d4828-bf69-4119-a519-a4edd2aa8c36
 :END:
 
-- [ ] Each entity should has its own KV storage (theoretically unlimited space).
-- [ ] No limitation for value: store any JSON-compatable structure.
-- [ ] Future plan: nested =set= / =del= value.
+- [X] Each entity should has its own KV storage (theoretically unlimited space).
+- [X] No limitation for value: store any JSON-compatable structure.
+- [X] Nested =set= / =del= value.
