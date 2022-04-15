@@ -10,6 +10,7 @@ use serde::Deserialize;
 /// https://github.com/nextdotid/proof-server/blob/master/docs/api.apib
 #[derive(Deserialize, Debug)]
 pub struct ProofQueryResponse {
+    pub pagination: ProofQueryResponsePagination,
     pub ids: Vec<ProofPersona>,
 }
 
@@ -27,6 +28,14 @@ pub struct Proof {
     pub last_checked_at: String,
     pub is_valid: bool,
     pub invalid_reason: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ProofQueryResponsePagination {
+    pub total: u32,
+    pub per: u32,
+    pub current: u32,
+    pub next: u32,
 }
 
 #[derive(Deserialize, Debug)]
@@ -98,7 +107,7 @@ pub async fn can_set_kv(
         }
     }
     // Else: connect to ProofService
-    let persona_full_hex = format!("0x{}", hex::encode(persona_pubkey.serialize()));
+    let persona_full_hex = format!("0x{}", hex::encode(persona_pubkey.serialize_compressed()));
     let query_response = query(&crate::config::C.proof_service.url, &persona_full_hex).await?;
     if query_response.ids.len() == 0 {
         return Err(Error::General(
