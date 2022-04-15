@@ -107,13 +107,13 @@ pub async fn can_set_kv(
         }
     }
     // Else: connect to ProofService
-    let persona_full_hex = format!("0x{}", hex::encode(persona_pubkey.serialize_compressed()));
-    let query_response = query(&crate::config::C.proof_service.url, &persona_full_hex).await?;
+    let persona_compressed_hex = format!("0x{}", hex::encode(persona_pubkey.serialize_compressed()));
+    let query_response = query(&crate::config::C.proof_service.url, &persona_compressed_hex).await?;
     if query_response.ids.len() == 0 {
         return Err(Error::General(
             format!(
                 "Persona not found on ProofService: {}",
-                persona_full_hex
+                persona_compressed_hex
             ),
             StatusCode::BAD_REQUEST,
         ));
@@ -123,10 +123,10 @@ pub async fn can_set_kv(
     let persona_found = query_response
         .ids
         .iter()
-        .find(|id| id.persona == persona_full_hex)
+        .find(|id| id.persona == persona_compressed_hex)
         .ok_or_else(|| {
             Error::General(
-                format!("Persona not found on ProofService: {}", persona_full_hex),
+                format!("Persona not found on ProofService: {}", persona_compressed_hex),
                 StatusCode::BAD_REQUEST,
             )
         })?;
