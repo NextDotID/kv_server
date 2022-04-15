@@ -183,15 +183,24 @@ impl Secp256k1KeyPair {
         );
         let digest = hash_keccak256(&personal_payload);
 
-        let recovery_id = sig_r_s_recovery
+        let mut recovery_id = sig_r_s_recovery
             .get(64)
-            .ok_or_else(|| Error::CryptoError(libsecp256k1::Error::InvalidInputLength))?;
+            .ok_or_else(|| Error::CryptoError(libsecp256k1::Error::InvalidInputLength))?
+            .clone();
+
+        if recovery_id == 27 || recovery_id == 28 {
+            recovery_id -= 27;
+        }
+        if recovery_id != 0 || recovery_id != 1 {
+            return Err(Error::CryptoError(libsecp256k1::Error::InvalidRecoveryId));
+        }
+
         let signature = Signature::parse_standard_slice(&sig_r_s_recovery.as_slice()[..64])
             .map_err(|e| Error::from(e))?;
         let pubkey = libsecp256k1::recover(
             &Message::parse(&digest),
             &signature,
-            &RecoveryId::parse(*recovery_id).unwrap(),
+            &RecoveryId::parse(recovery_id).unwrap(),
         )?;
 
         Ok(pubkey)
