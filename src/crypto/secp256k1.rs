@@ -191,8 +191,8 @@ impl Secp256k1KeyPair {
         if recovery_id == 27 || recovery_id == 28 {
             recovery_id -= 27;
         }
-        if recovery_id != 0 || recovery_id != 1 {
-            return Err(Error::CryptoError(libsecp256k1::Error::InvalidRecoveryId));
+        if recovery_id != 0 && recovery_id != 1 {
+            return Err(Error::CryptoError(libsecp256k1::Error::InvalidSignature));
         }
 
         let signature = Signature::parse_standard_slice(&sig_r_s_recovery.as_slice()[..64])
