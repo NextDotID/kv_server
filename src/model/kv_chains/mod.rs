@@ -110,7 +110,7 @@ impl NewKVChain {
             identity: self.identity.clone(),
             patch: self.patch.clone(),
             previous: previous_sig,
-            created_at: timestamp(),
+            created_at: self.created_at.timestamp(),
         })
     }
 

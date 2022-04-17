@@ -158,4 +158,35 @@ mod tests {
         let proof = resp_body.proofs.first().unwrap();
         assert_eq!(proof.content, json!({"test2": "new kv"}));
     }
+
+    #[tokio::test]
+    async fn test_actual_case_1() {
+        let req_body = UploadRequest{
+            persona: "0x0289689d4846db795310b3fb6dea7ab8aba2b6734ddd3b3744a412ab174bf8cbfc".into(),
+            platform: "twitter".into(),
+            identity: "weipingzhu2".into(),
+            signature: "De/UN6E7HosqZxhpG3+CRD7m8T+ozcdvKO/JCXTr/X9Hek0KP2SQFZQtZQOv/F9XgwufvHeGyD387I7QwJAxqRs=".into(),
+            uuid: "fd042b27-0f21-476d-9e23-478c98ac6700".into(),
+            created_at: 1650007736,
+            patch: json!({
+                "com.mask.plugin": {
+                    "twitter_weipingzhu2": {
+                        "nickname": "vitalik.eth",
+                        "userId": "WeipingZhu2",
+                        "imageUrl": "https://pbs.twimg.com/profile_images/1514868277415084038/BJSpRyjq_normal.png",
+                        "avatarId": "1514868277415084038",
+                        "address": "0x495f947276749ce646f68ac8c248420045cb7b5e",
+                        "tokenId": "84457744602723809043049191225279009657327463478214710277063869711841964851201"
+                    }
+                }
+            }),
+        };
+        let req: Request = ::http::Request::builder()
+            .method(Method::POST)
+            .uri(format!("http://localhost/test"))
+            .body(serde_json::to_string(&req_body).unwrap())
+            .unwrap();
+        let resp = controller(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
 }
