@@ -10,4 +10,4 @@ listen = "127.0.0.1"
 port = 3721
 
 [proof_service]
-url = "https://proof-service.nextnext.id/"
+url = "https://proof-service.nextnext.id"

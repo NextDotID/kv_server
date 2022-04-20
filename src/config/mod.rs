@@ -71,14 +71,14 @@ pub fn app_env() -> ENV {
 pub fn parse() -> Result<KVConfig, Error> {
     let s = Config::builder()
         // Default
-        .add_source(config::File::with_name(CONFIG_FILE_PATH))
+        .add_source(config::File::with_name(CONFIG_FILE_PATH).required(false))
         // app-env-based config
         .add_source(
             config::File::with_name(&format!("{}{}.toml", CONFIG_FILE_PATH_PREFIX, app_env()))
                 .required(false),
         )
         // runtime-ENV-based config
-        .add_source(config::Environment::with_prefix("KV").separator("_"))
+        .add_source(config::Environment::with_prefix("KV").separator("__").ignore_empty(true))
         .build()?;
 
     s.try_deserialize().map_err(|e| e.into())
@@ -87,4 +87,13 @@ pub fn parse() -> Result<KVConfig, Error> {
 /// `AWS_SECRET_NAME` and `AWS_SECRET_REGION` is needed.
 pub fn from_aws_secret() -> Result<KVConfig, Error> {
     todo!()
+}
+
+impl KVConfig {
+    pub fn database_url(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.db.username, self.db.password, self.db.host, self.db.port, self.db.db,
+        )
+    }
 }

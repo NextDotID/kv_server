@@ -17,11 +17,34 @@ path = "examples/lambda.rs"
 config = "0.12"
 lazy_static = "1.4"
 log = "0.4"
+env_logger = "0.9"
 thiserror = "1.0"
 
+http = "0.2.6"
+url = "2.2"
 lambda_runtime = "0.5.0"
 lambda_http = "0.5.0"
+hyper = { version = "0.14.17", features = ["full"] }
+hyper-tls = "*"
 
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+json-patch = "*"
+
+# diesel `uuidv07` feature is bound tight with `uuid` v0.7.x
+diesel = { version = "1.4", features = ["postgres", "uuidv07", "r2d2", "serde_json", "chrono"] }
+diesel_migrations = "*"
+uuid = { version = "0.7", features = ["serde", "v4"] }
+chrono = "0.4"
+
+# crypto
+rand = "0.8"
+libsecp256k1 = "0.7"
+sha3 = "0.10" # Keccak256
+base64 = "0.13"
+hex = "0.4"
+hex-literal = "0.3"
+
+[dev_dependencies]
+fake = "2.4"
