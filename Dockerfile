@@ -24,4 +24,9 @@ WORKDIR /app
 
 RUN yum install -y postgresql-devel openssl-devel && yum clean all && rm -rf /var/cache/yum
 
+ARG COMMIT=""
+ARG NOW=""
+ENV KV_SERVER_BUILD_AT=${NOW}
+ENV KV_SERVER_CURRENT_COMMIT_ID=${COMMIT}
+
 COPY --from=builder /app/target/release/examples/lambda ${LAMBDA_RUNTIME_DIR}/bootstrap
