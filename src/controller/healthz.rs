@@ -17,8 +17,8 @@ pub async fn controller(_req: Request) -> Result<Response, Error> {
         StatusCode::OK,
         &HealthzResponse {
             hello: "kv server".to_string(),
-            build_at: option_env!("KV_SERVER_BUILD_AT").unwrap_or("UNKNOW").to_string(),
-            commit_version: option_env!("KV_SERVER_CURRENT_COMMIT_ID").unwrap_or("UNKNOW").to_string(), 
+            build_at: option_env!("KV_SERVER_BUILD_AT").unwrap_or("UNKNOWN").to_string(),
+            commit_version: option_env!("KV_SERVER_CURRENT_COMMIT_ID").unwrap_or("UNKNOWN").to_string(), 
         },
     )
 }
