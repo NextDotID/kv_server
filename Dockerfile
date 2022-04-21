@@ -13,6 +13,11 @@ ADD Cargo.lock .
 
 RUN source ~/.cargo/env && cargo fetch
 
+ARG COMMIT=""
+ARG NOW=""
+ENV KV_SERVER_BUILD_AT=${NOW}
+ENV KV_SERVER_CURRENT_COMMIT_ID=${COMMIT}
+
 ADD . .
 RUN source ~/.cargo/env && cargo build --release --example lambda
 
@@ -23,10 +28,5 @@ LABEL maintainer="Nyk Ma <nykma@mask.io>"
 WORKDIR /app
 
 RUN yum install -y postgresql-devel openssl-devel && yum clean all && rm -rf /var/cache/yum
-
-ARG COMMIT=""
-ARG NOW=""
-ENV KV_SERVER_BUILD_AT=${NOW}
-ENV KV_SERVER_CURRENT_COMMIT_ID=${COMMIT}
 
 COPY --from=builder /app/target/release/examples/lambda ${LAMBDA_RUNTIME_DIR}/bootstrap
