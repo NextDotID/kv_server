@@ -1,5 +1,5 @@
 # Build Lambda Docker image
-FROM amazonlinux:2 AS builder
+FROM docker.io/amazonlinux:2 AS builder
 
 WORKDIR /app
 

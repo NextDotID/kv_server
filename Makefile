@@ -30,7 +30,7 @@ lambda-delete:
 	@aws lambda delete-function --function-name ${func}
 
 lambda-container-build:
-	@docker build --platform linux/amd64 --build-arg=COMMIT=$(git rev-parse --short HEAD) --build-arg=NOW=$(date +%s) -t nextid/kv-server-lambda:latest .
+	@podman build --platform linux/amd64 --build-arg=COMMIT=$(git rev-parse --short HEAD) --build-arg=NOW=$(date +%s) -t nextid/kv-server-lambda:latest .
 
 pg-connect:
 	@echo "kv_server\n" | docker-compose exec pg psql -Ukv_server kv_server_development
