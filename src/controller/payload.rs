@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PayloadRequest {
-    pub persona: String,
+    pub persona: Option<String>,
+    pub avatar: Option<String>,
     pub platform: String,
     pub identity: String,
     pub patch: serde_json::Value,
@@ -25,7 +26,13 @@ struct PayloadResponse {
 
 pub async fn controller(req: Request) -> Result<Response, Error> {
     let params: PayloadRequest = json_parse_body(&req)?;
-    let keypair = Secp256k1KeyPair::from_pubkey_hex(&params.persona)?;
+
+    let keypair = Secp256k1KeyPair::from_pubkey_hex(
+        &params
+            .avatar
+            .or(params.persona)
+            .ok_or_else(|| Error::ParamError("avatar not found".into()))?,
+    )?;
     can_set_kv(&keypair.public_key, &params.platform, &params.identity).await?;
     let conn = establish_connection();
     let mut new_kvchain = NewKVChain::for_persona(&conn, &keypair.public_key)?;
@@ -54,8 +61,10 @@ mod tests {
     use serde_json::json;
 
     use crate::{
-        crypto::util::{compress_public_key, hex_public_key}, model::kv_chains::KVChain, schema::kv_chains::dsl::*,
-        util::{vec_to_base64, naive_now},
+        crypto::util::{compress_public_key, hex_public_key},
+        model::kv_chains::KVChain,
+        schema::kv_chains::dsl::*,
+        util::{naive_now, vec_to_base64},
     };
 
     use super::*;
@@ -89,7 +98,8 @@ mod tests {
         } = Secp256k1KeyPair::generate();
 
         let req_body = PayloadRequest {
-            persona: compress_public_key(&public_key),
+            persona: Some(compress_public_key(&public_key)),
+            avatar: None,
             platform: "facebook".into(),
             identity: Faker.fake(),
             patch: json!({"test":"abc"}),
@@ -120,7 +130,8 @@ mod tests {
         let old_kv_chain = generate_data(&conn, &public_key).unwrap();
 
         let req_body = PayloadRequest {
-            persona: compress_public_key(&public_key),
+            persona: None,
+            avatar: Some(compress_public_key(&public_key)),
             platform: "facebook".into(),
             identity: Faker.fake(),
             patch: json!({"test":"abc"}),

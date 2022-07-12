@@ -14,6 +14,7 @@ use super::json_response;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryResponse {
     pub persona: String,
+    pub avatar: String,
     pub proofs: Vec<QueryResponseSingleProof>,
 }
 
@@ -26,13 +27,14 @@ pub struct QueryResponseSingleProof {
 
 pub async fn controller(req: Request) -> Result<Response, Error> {
     let params = query_parse(req);
-    let persona_hex = params
-        .get("persona")
-        .ok_or(Error::ParamMissing("persona".into()))?;
+    let avatar_hex = params
+        .get("avatar")
+        .or(params.get("persona"))
+        .ok_or(Error::ParamMissing("avatar".into()))?;
     let Secp256k1KeyPair {
         public_key,
         secret_key: _,
-    } = Secp256k1KeyPair::from_pubkey_hex(persona_hex)?;
+    } = Secp256k1KeyPair::from_pubkey_hex(avatar_hex)?;
 
     let conn = establish_connection();
     let response = query_response(&conn, &public_key)?;
@@ -49,6 +51,7 @@ pub fn query_response(
     let persona_hex = hex_public_key(persona_public_key);
     let mut response = QueryResponse {
         persona: format!("0x{}", persona_hex),
+        avatar: format!("0x{}", persona_hex),
         proofs: vec![],
     };
     for proof in results.iter() {
@@ -86,7 +89,7 @@ mod tests {
         let resp = controller(req).await.unwrap();
         let body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(0, body.proofs.len());
-        assert_eq!(format!("0x{}", pubkey_hex), body.persona);
+        assert_eq!(format!("0x{}", pubkey_hex), body.avatar);
     }
 
     #[tokio::test]
@@ -109,7 +112,7 @@ mod tests {
         let resp = controller(req).await.unwrap();
         let body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(1, body.proofs.len());
-        assert_eq!(format!("0x{}", hex_public_key(&public_key)), body.persona);
+        assert_eq!(format!("0x{}", hex_public_key(&public_key)), body.avatar);
         assert_eq!("twitter", body.proofs.first().unwrap().platform);
         assert_eq!(json!({}), body.proofs.first().unwrap().content);
     }

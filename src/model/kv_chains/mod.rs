@@ -12,7 +12,7 @@ use crate::{
     error::Error,
     model::{establish_connection, kv::KV},
     schema::{kv_chains, kv_chains::dsl::*},
-    util::{timestamp, vec_to_base64, naive_now},
+    util::{naive_now, vec_to_base64},
 };
 
 #[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, Debug)]
@@ -50,7 +50,7 @@ pub struct NewKVChain {
 pub struct SignPayload {
     pub version: String,
     pub uuid: Uuid,
-    pub persona: String,
+    pub avatar: String,
     pub platform: String,
     pub identity: String,
     pub patch: serde_json::Value,
@@ -105,7 +105,7 @@ impl NewKVChain {
         Ok(SignPayload {
             version: "1".into(),
             uuid: self.uuid.clone(),
-            persona: hex_public_key(&self.public_key()),
+            avatar: hex_public_key(&self.public_key()),
             platform: self.platform.clone(),
             identity: self.identity.clone(),
             patch: self.patch.clone(),
