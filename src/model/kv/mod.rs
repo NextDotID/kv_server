@@ -42,6 +42,11 @@ impl KV {
             .map_err(|e| Error::from(e))?;
         Ok(())
     }
+
+    /// `"0xHEXSTRING"` of persona (avatar). Uncompressed form.
+    pub fn avatar(&self) -> String {
+        format!("0x{}", hex::encode(self.persona.clone()))
+    }
 }
 
 /// Find all KVs belong to given persona.
@@ -54,6 +59,20 @@ pub fn find_all_by_persona(
         .filter(persona.eq(&persona_vec))
         .get_results(conn)
         .map_err(|e| Error::from(e))?;
+
+    Ok(result)
+}
+
+/// Find all KVs belongs to given platform-identity pair.
+pub fn find_all_by_identity(
+    conn: &PgConnection,
+    platform_given: &str,
+    identity_given: &str,
+) -> Result<Vec<KV>, Error> {
+    let result: Vec<KV> = kv
+        .filter(platform.eq(platform_given))
+        .filter(identity.eq(identity_given))
+        .get_results(conn)?;
 
     Ok(result)
 }

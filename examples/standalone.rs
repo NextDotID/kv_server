@@ -12,7 +12,7 @@ use hyper::{
     StatusCode,
 };
 use kv_server::controller::{
-    error_response, healthz, payload, query, upload, Body, Request, Response,
+    error_response, healthz, payload, query, upload, Body, Request, Response, query_by_identity,
 };
 use kv_server::model;
 use kv_server::{config::C, error::Error};
@@ -50,6 +50,7 @@ async fn entrypoint(req: HyperRequest<HyperBody>) -> Result<HyperResponse<HyperB
 
     Ok(match (req.method(), req.uri().path()) {
         (&Method::GET, "/healthz") => parse(req, healthz::controller).await,
+        (&Method::GET, "/api/v1/kv/by_identity") => parse(req, query_by_identity::controller).await,
         (&Method::GET, "/v1/kv") => parse(req, query::controller).await,
         (&Method::POST, "/v1/kv/payload") => parse(req, payload::controller).await,
         (&Method::POST, "/v1/kv") => parse(req, upload::controller).await,

@@ -13,7 +13,7 @@ mod tests {
             kv_chains::{KVChain, NewKVChain},
         },
         schema::kv_chains::dsl::*,
-        util::{vec_to_base64, naive_now},
+        util::{naive_now, vec_to_base64},
     };
 
     fn before_each(connection: &PgConnection) -> Result<(), Error> {
@@ -136,7 +136,8 @@ mod tests {
 
         let sig = new_kv.sign(&keypair)?;
         new_kv.signature = sig;
-        new_kv.signature_payload = serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
+        new_kv.signature_payload =
+            serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
         assert!(new_kv.validate().is_ok());
 
         Ok(())

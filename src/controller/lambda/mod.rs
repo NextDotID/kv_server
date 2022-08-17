@@ -1,6 +1,6 @@
 use crate::controller::{
     error_response, healthz, payload, query, upload, Body as OurBody, Request as OurRequest,
-    Response as OurResponse,
+    Response as OurResponse, query_by_identity,
 };
 use crate::error::Error;
 use http::{Method, StatusCode};
@@ -44,6 +44,7 @@ pub async fn entrypoint(req: LambdaRequest) -> Result<impl IntoResponse, LambdaE
 
     Ok(match (req.method(), req.uri().path()) {
         (&Method::GET, "/api/healthz") => parse(req, healthz::controller).await,
+        (&Method::GET, "/api/v1/kv/by_identity") => parse(req, query_by_identity::controller).await,
         (&Method::GET, "/api/v1/kv") => parse(req, query::controller).await,
         (&Method::POST, "/api/v1/kv/payload") => parse(req, payload::controller).await,
         (&Method::POST, "/api/v1/kv") => parse(req, upload::controller).await,

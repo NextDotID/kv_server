@@ -54,11 +54,11 @@ pub fn query_response(
         avatar: format!("0x{}", persona_hex),
         proofs: vec![],
     };
-    for proof in results.iter() {
+    for proof in results.into_iter() {
         let proof_single = QueryResponseSingleProof {
-            platform: proof.platform.clone(),
-            identity: proof.identity.clone(),
-            content: proof.content.clone(),
+            platform: proof.platform,
+            identity: proof.identity,
+            content: proof.content,
         };
         response.proofs.push(proof_single);
     }

@@ -1,6 +1,7 @@
 pub mod healthz;
 pub mod payload;
 pub mod query;
+pub mod query_by_identity;
 pub mod upload;
 
 use http::StatusCode;
