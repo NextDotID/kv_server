@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct UploadRequest {
-    pub persona: String,
+    pub persona: Option<String>,
+    pub avatar: Option<String>,
     pub platform: String,
     pub identity: String,
     pub signature: String,
@@ -24,7 +25,11 @@ struct UploadRequest {
 pub async fn controller(request: Request) -> Result<Response, Error> {
     let req: UploadRequest = json_parse_body(&request)?;
     let sig = base64_to_vec(&req.signature)?;
-    let persona = Secp256k1KeyPair::from_pubkey_hex(&req.persona)?;
+    let persona = Secp256k1KeyPair::from_pubkey_hex(
+        &req.avatar
+            .or(req.persona)
+            .ok_or_else(|| Error::ParamError("avatar not found".into()))?,
+    )?;
     let uuid = uuid::Uuid::parse_str(&req.uuid)?;
     can_set_kv(&persona.public_key, &req.platform, &req.identity).await?;
 
@@ -36,7 +41,8 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     new_kv.patch = req.patch.clone();
     new_kv.uuid = uuid;
     new_kv.created_at = timestamp_to_naive(req.created_at);
-    new_kv.signature_payload = serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
+    new_kv.signature_payload =
+        serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
 
     // Validate signature
     new_kv.validate()?;
@@ -58,7 +64,7 @@ mod tests {
         controller::query::QueryResponse,
         crypto::util::{compress_public_key, hex_public_key},
         model::{establish_connection, kv},
-        util::{vec_to_base64, naive_now},
+        util::{naive_now, vec_to_base64},
     };
     use fake::{Fake, Faker};
     use http::Method;
@@ -81,7 +87,8 @@ mod tests {
         new_kv_chain.signature = new_kv_chain.sign(&keypair).unwrap();
 
         let req_body = UploadRequest {
-            persona: compress_public_key(&keypair.public_key),
+            persona: None,
+            avatar: Some(compress_public_key(&keypair.public_key)),
             platform: new_kv_chain.platform.clone(),
             identity: new_kv_chain.identity,
             signature: vec_to_base64(&new_kv_chain.signature),
@@ -99,7 +106,10 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::CREATED);
         let resp_body: QueryResponse = serde_json::from_str(resp.body()).unwrap();
         assert_eq!(1, resp_body.proofs.len());
-        assert_eq!(format!("0x{}", hex_public_key(&keypair.public_key)), resp_body.persona);
+        assert_eq!(
+            format!("0x{}", hex_public_key(&keypair.public_key)),
+            resp_body.persona
+        );
         assert_eq!(
             new_kv_chain.platform,
             resp_body.proofs.first().unwrap().platform
@@ -137,7 +147,8 @@ mod tests {
         new_kv_chain.signature = sig;
 
         let req_body = UploadRequest {
-            persona: compress_public_key(&keypair.public_key),
+            persona: Some(compress_public_key(&keypair.public_key)),
+            avatar: None,
             platform: new_kv_chain.platform.clone(),
             identity: new_kv_chain.identity,
             signature: vec_to_base64(&new_kv_chain.signature),
@@ -162,7 +173,8 @@ mod tests {
     #[tokio::test]
     async fn test_actual_case_1() {
         let req_body = UploadRequest{
-            persona: "0x0289689d4846db795310b3fb6dea7ab8aba2b6734ddd3b3744a412ab174bf8cbfc".into(),
+            persona: Some("0x0289689d4846db795310b3fb6dea7ab8aba2b6734ddd3b3744a412ab174bf8cbfc".into()),
+            avatar: None,
             platform: "twitter".into(),
             identity: "weipingzhu2".into(),
             signature: "De/UN6E7HosqZxhpG3+CRD7m8T+ozcdvKO/JCXTr/X9Hek0KP2SQFZQtZQOv/F9XgwufvHeGyD387I7QwJAxqRs=".into(),

@@ -13,6 +13,11 @@ ADD Cargo.lock .
 
 RUN source ~/.cargo/env && cargo fetch
 
+ARG COMMIT=""
+ARG NOW=""
+ENV KV_SERVER_BUILD_AT=${NOW}
+ENV KV_SERVER_CURRENT_COMMIT_ID=${COMMIT}
+
 ADD . .
 RUN source ~/.cargo/env && cargo build --release --example lambda
 

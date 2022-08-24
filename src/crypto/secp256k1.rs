@@ -211,7 +211,14 @@ impl Secp256k1KeyPair {
 mod tests {
     use serde_json::json;
 
-    use crate::{crypto::util::hex_public_key, model::{kv_chains::{SignPayload, NewKVChain}, self}, util};
+    use crate::{
+        crypto::util::hex_public_key,
+        model::{
+            self,
+            kv_chains::{NewKVChain, SignPayload},
+        },
+        util,
+    };
 
     use super::*;
 
@@ -226,7 +233,7 @@ mod tests {
         let payload = SignPayload {
             version: "1".into(),
             uuid: uuid::Uuid::parse_str("fd042b27-0f21-476d-9e23-478c98ac6700")?,
-            persona: hex_public_key(&public_key),
+            avatar: hex_public_key(&public_key),
             platform: "twitter".into(),
             identity: "weipingzhu2".into(),
             patch: json!({
@@ -264,7 +271,7 @@ mod tests {
         let payload = SignPayload {
             version: "1".into(),
             uuid: uuid::Uuid::parse_str("b333f060-2cdd-4a7f-8fb1-c790c0fadc20")?,
-            persona: hex_public_key(&public_key),
+            avatar: hex_public_key(&public_key),
             platform: "nextid".into(),
             identity: "0x03b0a3ebb1fb9b7f3ba7653dfb8776e9db5de537e8cd6c4b9cc927cbbcdc394018".into(),
             patch: json!({"com.maskbook.tip":[{"created_at":"1650188620","identity":"0x8c5494d05b4f18639834a0f1f4577d5c0a67adf0","invalid_reason":"","isDefault":0,"isPublic":1,"is_valid":true,"last_checked_at":"1650188620","platform":"ethereum"},{"created_at":"1650195158","identity":"0x2ec8ebb0a8eaa40e4ce620cf9f84a96df68d4669","invalid_reason":"","isDefault":1,"isPublic":1,"is_valid":true,"last_checked_at":"1650195158","platform":"ethereum"}]}),
@@ -273,7 +280,10 @@ mod tests {
         };
         let expected_payload = r#"{"version":"1","uuid":"b333f060-2cdd-4a7f-8fb1-c790c0fadc20","persona":"04b0a3ebb1fb9b7f3ba7653dfb8776e9db5de537e8cd6c4b9cc927cbbcdc394018b99ab0ebafec620820056af9fe162dda5c536b408aedacbd2cdd79db7f56ef91","platform":"nextid","identity":"0x03b0a3ebb1fb9b7f3ba7653dfb8776e9db5de537e8cd6c4b9cc927cbbcdc394018","patch":{"com.maskbook.tip":[{"created_at":"1650188620","identity":"0x8c5494d05b4f18639834a0f1f4577d5c0a67adf0","invalid_reason":"","isDefault":0,"isPublic":1,"is_valid":true,"last_checked_at":"1650188620","platform":"ethereum"},{"created_at":"1650195158","identity":"0x2ec8ebb0a8eaa40e4ce620cf9f84a96df68d4669","invalid_reason":"","isDefault":1,"isPublic":1,"is_valid":true,"last_checked_at":"1650195158","platform":"ethereum"}]},"created_at":1650209531,"previous":null}"#;
 
-        assert_eq!(serde_json::to_string(&payload)?, expected_payload.to_string());
+        assert_eq!(
+            serde_json::to_string(&payload)?,
+            expected_payload.to_string()
+        );
         let signature = util::base64_to_vec(&"CNn87foZQt8AY+yRA/ys2/99zlD6gEnph3ujaIdQXxlKdHB41Ev+/rS/fzIULuWrljGreVbR/hRHL7RB51jIfRs=".into())?;
         let pubkey_recovered =
             Secp256k1KeyPair::recover_from_personal_signature(&signature, &expected_payload)?;
@@ -288,7 +298,10 @@ mod tests {
         new_kv.uuid = payload.uuid;
         new_kv.created_at = util::timestamp_to_naive(payload.created_at);
 
-        assert_eq!(expected_payload, serde_json::to_string(&new_kv.generate_signature_payload()?)?);
+        assert_eq!(
+            expected_payload,
+            serde_json::to_string(&new_kv.generate_signature_payload()?)?
+        );
 
         Ok(())
     }
