@@ -34,8 +34,8 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
             .ok_or_else(|| Error::ParamError("avatar not found".into()))?,
     )?;
     can_set_kv(&keypair.public_key, &params.platform, &params.identity).await?;
-    let conn = establish_connection();
-    let mut new_kvchain = NewKVChain::for_persona(&conn, &keypair.public_key)?;
+    let mut conn = establish_connection();
+    let mut new_kvchain = NewKVChain::for_persona(&mut conn, &keypair.public_key)?;
 
     new_kvchain.platform = params.platform;
     new_kvchain.identity = params.identity;
@@ -69,7 +69,7 @@ mod tests {
 
     use super::*;
 
-    fn generate_data(conn: &PgConnection, persona_pubkey: &PublicKey) -> Result<KVChain, Error> {
+    fn generate_data(conn: &mut PgConnection, persona_pubkey: &PublicKey) -> Result<KVChain, Error> {
         let new_uuid = ::uuid::Uuid::new_v4();
         let persona_bytes = persona_pubkey.serialize().to_vec();
         let new_platform: String = Faker.fake();
@@ -122,12 +122,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_with_previous() {
-        let conn = establish_connection();
+        let mut conn = establish_connection();
         let Secp256k1KeyPair {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let old_kv_chain = generate_data(&conn, &public_key).unwrap();
+        let old_kv_chain = generate_data(&mut conn, &public_key).unwrap();
 
         let req_body = PayloadRequest {
             persona: None,

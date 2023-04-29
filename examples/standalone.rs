@@ -1,6 +1,4 @@
-#[macro_use]
-extern crate diesel_migrations;
-
+use diesel_migrations::{EmbeddedMigrations, embed_migrations, MigrationHarness};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{
     Body as HyperBody,
@@ -21,13 +19,13 @@ use std::convert::Infallible;
 use std::future::Future;
 use std::net::SocketAddr;
 
-embed_migrations!("./migrations");
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[tokio::main]
 async fn main() {
     env_logger::try_init().unwrap();
     let config = C.clone(); // TODO
-    embedded_migrations::run(&model::establish_connection()).unwrap();
+    model::establish_connection().run_pending_migrations(MIGRATIONS).expect("Migration failed");
 
     let addr: SocketAddr = format!("{}:{}", config.web.listen, config.web.port)
         .parse()

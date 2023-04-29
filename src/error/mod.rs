@@ -32,7 +32,7 @@ pub enum Error {
     #[error("base64 error: {0}")]
     Base64Error(#[from] base64::DecodeError),
     #[error("UUID parse error: {0}")]
-    UuidParseError(#[from] uuid::parser::ParseError),
+    UuidParseError(#[from] uuid::Error),
 }
 
 impl Error {

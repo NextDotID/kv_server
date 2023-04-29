@@ -1,7 +1,7 @@
 use crate::error::Error;
 use chrono::NaiveDateTime;
 
-pub fn base64_to_vec(b64: &String) -> Result<Vec<u8>, Error> {
+pub fn base64_to_vec(b64: &str) -> Result<Vec<u8>, Error> {
     base64::decode(b64).map_err(|e| e.into())
 }
 

@@ -29,14 +29,14 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
         .get("identity")
         .ok_or(Error::ParamMissing("identity".into()))?;
 
-    let conn = establish_connection();
-    let response = query_response(&conn, &platform, &identity)?;
+    let mut conn = establish_connection();
+    let response = query_response(&mut conn, &platform, &identity)?;
 
     json_response(StatusCode::OK, &response)
 }
 
 fn query_response(
-    conn: &PgConnection,
+    conn: &mut PgConnection,
     platform: &str,
     identity: &str,
 ) -> Result<QueryResponse, Error> {
@@ -79,7 +79,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_result() -> Result<(), Error> {
-        let conn = establish_connection();
+        let mut conn = establish_connection();
         let platform: String = "twitter".into();
         let identity: String = Faker.fake();
         let Secp256k1KeyPair {
@@ -90,8 +90,8 @@ mod tests {
             public_key: public_key_2,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let (created1, _) = find_or_create(&conn, &platform, &identity, &public_key_1).unwrap();
-        let (created2, _) = find_or_create(&conn, &platform, &identity, &public_key_2).unwrap();
+        let (created1, _) = find_or_create(&mut conn, &platform, &identity, &public_key_1).unwrap();
+        let (created2, _) = find_or_create(&mut conn, &platform, &identity, &public_key_2).unwrap();
         let req: Request = ::http::Request::builder()
             .method(Method::GET)
             .uri(format!("http://localhost/test?platform={}&identity={}", platform, identity))

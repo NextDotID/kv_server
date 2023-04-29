@@ -36,17 +36,17 @@ pub async fn controller(req: Request) -> Result<Response, Error> {
         secret_key: _,
     } = Secp256k1KeyPair::from_pubkey_hex(avatar_hex)?;
 
-    let conn = establish_connection();
-    let response = query_response(&conn, &public_key)?;
+    let mut conn = establish_connection();
+    let response = query_response(&mut conn, &public_key)?;
 
     json_response(StatusCode::OK, &response)
 }
 
 pub fn query_response(
-    conn: &PgConnection,
+    conn: &mut PgConnection,
     persona_public_key: &PublicKey,
 ) -> Result<QueryResponse, Error> {
-    let results = kv::find_all_by_persona(&conn, persona_public_key)?;
+    let results = kv::find_all_by_persona(conn, persona_public_key)?;
 
     let persona_hex = hex_public_key(persona_public_key);
     let mut response = QueryResponse {
@@ -94,12 +94,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_controller_with_result() {
-        let conn = establish_connection();
+        let mut conn = establish_connection();
         let Secp256k1KeyPair {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        kv::find_or_create(&conn, "twitter", &fake::Faker.fake::<String>(), &public_key).unwrap();
+        kv::find_or_create(&mut conn, "twitter", &fake::Faker.fake::<String>(), &public_key).unwrap();
 
         let req: Request = ::http::Request::builder()
             .method(Method::GET)

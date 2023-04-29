@@ -16,7 +16,7 @@ mod tests {
         util::{naive_now, vec_to_base64},
     };
 
-    fn before_each(connection: &PgConnection) -> Result<(), Error> {
+    fn before_each(connection: &mut PgConnection) -> Result<(), Error> {
         let _ = env_logger::try_init();
         // Clear DB
         diesel::delete(kv_chains).execute(connection)?;
@@ -24,7 +24,7 @@ mod tests {
         Ok(())
     }
 
-    fn generate_data(conn: &PgConnection, persona_pubkey: &PublicKey) -> Result<KVChain, Error> {
+    fn generate_data(conn: &mut PgConnection, persona_pubkey: &PublicKey) -> Result<KVChain, Error> {
         let new_uuid = ::uuid::Uuid::new_v4();
         let persona_bytes = persona_pubkey.serialize().to_vec();
         let new_platform: String = Faker.fake();
@@ -47,15 +47,15 @@ mod tests {
 
     #[test]
     fn test_find_last_link() -> Result<(), Error> {
-        let conn = establish_connection();
-        before_each(&conn)?;
+        let mut conn = establish_connection();
+        before_each(&mut conn)?;
         let Secp256k1KeyPair {
             public_key: pk,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&conn, &pk)?;
+        let link = generate_data(&mut conn, &pk)?;
 
-        let found = KVChain::find_last_link(&conn, &pk)?.unwrap();
+        let found = KVChain::find_last_link(&mut conn, &pk)?.unwrap();
         assert_eq!(found.id, link.id);
         assert_eq!(found.uuid, link.uuid);
         Ok(())
@@ -63,13 +63,13 @@ mod tests {
 
     #[test]
     fn test_newkv_finalize() -> Result<(), Error> {
-        let conn = establish_connection();
-        before_each(&conn)?;
+        let mut conn = establish_connection();
+        before_each(&mut conn)?;
         let Secp256k1KeyPair {
             public_key: pk,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&conn, &pk)?;
+        let link = generate_data(&mut conn, &pk)?;
 
         let new_identity: String = Faker.fake();
         let new_kvchain = NewKVChain {
@@ -83,7 +83,7 @@ mod tests {
             signature_payload: "".into(),
             created_at: naive_now(),
         };
-        let new_link = new_kvchain.finalize(&conn)?;
+        let new_link = new_kvchain.finalize(&mut conn)?;
         assert_eq!(new_link.previous_id.unwrap(), link.id);
         assert_eq!(new_link.platform, "facebook");
         assert_eq!(new_link.identity, new_identity);
@@ -92,15 +92,15 @@ mod tests {
 
     #[test]
     fn test_newkv_for_persona() -> Result<(), Error> {
-        let conn = establish_connection();
-        before_each(&conn)?;
+        let mut conn = establish_connection();
+        before_each(&mut conn)?;
         let Secp256k1KeyPair {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&conn, &public_key)?;
+        let link = generate_data(&mut conn, &public_key)?;
 
-        let new_kv = NewKVChain::for_persona(&conn, &public_key)?;
+        let new_kv = NewKVChain::for_persona(&mut conn, &public_key)?;
         assert_eq!(new_kv.persona, public_key.serialize().to_vec());
         assert_eq!(new_kv.previous_id, Some(link.id));
         Ok(())
@@ -108,14 +108,14 @@ mod tests {
 
     #[test]
     fn test_newkv_sign_body() -> Result<(), Error> {
-        let conn = establish_connection();
-        before_each(&conn)?;
+        let mut conn = establish_connection();
+        before_each(&mut conn)?;
         let Secp256k1KeyPair {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&conn, &public_key)?;
-        let new_kv = NewKVChain::for_persona(&conn, &public_key)?;
+        let link = generate_data(&mut conn, &public_key)?;
+        let new_kv = NewKVChain::for_persona(&mut conn, &public_key)?;
 
         let sign_body = new_kv.generate_signature_payload()?;
         assert!(sign_body.previous.unwrap() == vec_to_base64(&link.signature));
@@ -125,11 +125,11 @@ mod tests {
 
     #[test]
     fn test_newkv_sign_and_verify() -> Result<(), Error> {
-        let conn = establish_connection();
-        before_each(&conn)?;
+        let mut conn = establish_connection();
+        before_each(&mut conn)?;
         let keypair = Secp256k1KeyPair::generate();
-        generate_data(&conn, &keypair.public_key)?;
-        let mut new_kv = NewKVChain::for_persona(&conn, &keypair.public_key)?;
+        generate_data(&mut conn, &keypair.public_key)?;
+        let mut new_kv = NewKVChain::for_persona(&mut conn, &keypair.public_key)?;
         new_kv.platform = "facebook".into();
         new_kv.identity = Faker.fake();
         new_kv.patch = json!({"test": ["abc"]});

@@ -33,8 +33,8 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     let uuid = uuid::Uuid::parse_str(&req.uuid)?;
     can_set_kv(&persona.public_key, &req.platform, &req.identity).await?;
 
-    let conn = model::establish_connection();
-    let mut new_kv = NewKVChain::for_persona(&conn, &persona.public_key)?;
+    let mut conn = model::establish_connection();
+    let mut new_kv = NewKVChain::for_persona(&mut conn, &persona.public_key)?;
     new_kv.platform = req.platform;
     new_kv.identity = req.identity;
     new_kv.signature = sig;
@@ -48,12 +48,12 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     new_kv.validate()?;
 
     // Valid. Insert it.
-    let kv_link = new_kv.finalize(&conn)?;
+    let kv_link = new_kv.finalize(&mut conn)?;
     // Apply patch
-    kv_link.perform_patch(&conn)?;
+    kv_link.perform_patch(&mut conn)?;
 
     // All done. Build response.
-    let response = query_response(&conn, &persona.public_key)?;
+    let response = query_response(&mut conn, &persona.public_key)?;
     json_response(StatusCode::CREATED, &response)
 }
 
@@ -123,13 +123,13 @@ mod tests {
     #[tokio::test]
     async fn test_modify_existed() {
         let keypair = Secp256k1KeyPair::generate();
-        let conn = establish_connection();
+        let mut conn = establish_connection();
         let platform: String = Faker.fake();
         let identity: String = Faker.fake();
         let (existed_kv, _) =
-            kv::find_or_create(&conn, &platform, &identity, &keypair.public_key).unwrap();
+            kv::find_or_create(&mut conn, &platform, &identity, &keypair.public_key).unwrap();
         existed_kv
-            .patch(&conn, &json!({"test": "existed"}))
+            .patch(&mut conn, &json!({"test": "existed"}))
             .unwrap();
 
         let mut new_kv_chain = NewKVChain {
@@ -170,35 +170,36 @@ mod tests {
         assert_eq!(proof.content, json!({"test2": "new kv"}));
     }
 
-    #[tokio::test]
-    async fn test_actual_case_1() {
-        let req_body = UploadRequest{
-            persona: Some("0x0289689d4846db795310b3fb6dea7ab8aba2b6734ddd3b3744a412ab174bf8cbfc".into()),
-            avatar: None,
-            platform: "twitter".into(),
-            identity: "weipingzhu2".into(),
-            signature: "De/UN6E7HosqZxhpG3+CRD7m8T+ozcdvKO/JCXTr/X9Hek0KP2SQFZQtZQOv/F9XgwufvHeGyD387I7QwJAxqRs=".into(),
-            uuid: "fd042b27-0f21-476d-9e23-478c98ac6700".into(),
-            created_at: 1650007736,
-            patch: json!({
-                "com.mask.plugin": {
-                    "twitter_weipingzhu2": {
-                        "nickname": "vitalik.eth",
-                        "userId": "WeipingZhu2",
-                        "imageUrl": "https://pbs.twimg.com/profile_images/1514868277415084038/BJSpRyjq_normal.png",
-                        "avatarId": "1514868277415084038",
-                        "address": "0x495f947276749ce646f68ac8c248420045cb7b5e",
-                        "tokenId": "84457744602723809043049191225279009657327463478214710277063869711841964851201"
-                    }
-                }
-            }),
-        };
-        let req: Request = ::http::Request::builder()
-            .method(Method::POST)
-            .uri(format!("http://localhost/test"))
-            .body(serde_json::to_string(&req_body).unwrap())
-            .unwrap();
-        let resp = controller(req).await.unwrap();
-        assert_eq!(resp.status(), StatusCode::CREATED);
-    }
+    // NOTE: test below is created with `persona:` sig payload.
+    // #[tokio::test]
+    // async fn test_actual_case_1() {
+    //     let req_body = UploadRequest{
+    //         persona: Some("0x0289689d4846db795310b3fb6dea7ab8aba2b6734ddd3b3744a412ab174bf8cbfc".into()),
+    //         avatar: None,
+    //         platform: "twitter".into(),
+    //         identity: "weipingzhu2".into(),
+    //         signature: "De/UN6E7HosqZxhpG3+CRD7m8T+ozcdvKO/JCXTr/X9Hek0KP2SQFZQtZQOv/F9XgwufvHeGyD387I7QwJAxqRs=".into(),
+    //         uuid: "fd042b27-0f21-476d-9e23-478c98ac6700".into(),
+    //         created_at: 1650007736,
+    //         patch: json!({
+    //             "com.mask.plugin": {
+    //                 "twitter_weipingzhu2": {
+    //                     "nickname": "vitalik.eth",
+    //                     "userId": "WeipingZhu2",
+    //                     "imageUrl": "https://pbs.twimg.com/profile_images/1514868277415084038/BJSpRyjq_normal.png",
+    //                     "avatarId": "1514868277415084038",
+    //                     "address": "0x495f947276749ce646f68ac8c248420045cb7b5e",
+    //                     "tokenId": "84457744602723809043049191225279009657327463478214710277063869711841964851201"
+    //                 }
+    //             }
+    //         }),
+    //     };
+    //     let req: Request = ::http::Request::builder()
+    //         .method(Method::POST)
+    //         .uri(format!("http://localhost/test"))
+    //         .body(serde_json::to_string(&req_body).unwrap())
+    //         .unwrap();
+    //     let resp = controller(req).await.unwrap();
+    //     assert_eq!(resp.status(), StatusCode::CREATED);
+    // }
 }

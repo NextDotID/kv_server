@@ -63,7 +63,7 @@ impl Secp256k1KeyPair {
     /// let pair = Secp256k1KeyPair::from_pubkey_hex(&pubkey_hex.to_string()).unwrap();
     /// # assert_eq!(hex!("04c7cacde73af939c35d527b34e0556ea84bab27e6c0ed7c6c59be70f6d2db59c206b23529977117dc8a5d61fa848f94950422b79d1c142bcf623862e49f9e6575"), pair.public_key.serialize());
     /// ```
-    pub fn from_pubkey_hex(pubkey_hex: &String) -> Result<Self, Error> {
+    pub fn from_pubkey_hex(pubkey_hex: &str) -> Result<Self, Error> {
         let hex: &str;
         if pubkey_hex.starts_with("0x") {
             hex = &pubkey_hex[2..];
@@ -228,7 +228,7 @@ mod tests {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::from_pubkey_hex(
-            &"0x0289689d4846db795310b3fb6dea7ab8aba2b6734ddd3b3744a412ab174bf8cbfc".into(),
+            "0x03e108f03e61a7e24dbd91a4eb621e3759fd1c2adb0fd6e3ec44e1a0f5bb45fa90",
         )?;
         let payload = SignPayload {
             version: "1".into(),
@@ -252,7 +252,7 @@ mod tests {
             previous: None,
         };
         let payload_string = serde_json::to_string(&payload)?;
-        let signature = util::base64_to_vec(&"De/UN6E7HosqZxhpG3+CRD7m8T+ozcdvKO/JCXTr/X9Hek0KP2SQFZQtZQOv/F9XgwufvHeGyD387I7QwJAxqRs=".into())?;
+        let signature = util::base64_to_vec("N1RKoa9le6dUdhCl+OO2FZuCWk20AdwMORCuyPqyn4kZW/+D+pvvYsuA6XQJwIzNmCwoj7eHuCF6mPds0fbmDwE=")?;
         let pubkey_recovered =
             Secp256k1KeyPair::recover_from_personal_signature(&signature, &payload_string)?;
         assert_eq!(public_key, pubkey_recovered);
@@ -266,31 +266,31 @@ mod tests {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::from_pubkey_hex(
-            &"0x03b0a3ebb1fb9b7f3ba7653dfb8776e9db5de537e8cd6c4b9cc927cbbcdc394018".into(),
+            "0x03e108f03e61a7e24dbd91a4eb621e3759fd1c2adb0fd6e3ec44e1a0f5bb45fa90",
         )?;
         let payload = SignPayload {
             version: "1".into(),
             uuid: uuid::Uuid::parse_str("b333f060-2cdd-4a7f-8fb1-c790c0fadc20")?,
             avatar: hex_public_key(&public_key),
             platform: "nextid".into(),
-            identity: "0x03b0a3ebb1fb9b7f3ba7653dfb8776e9db5de537e8cd6c4b9cc927cbbcdc394018".into(),
+            identity: "0x03e108f03e61a7e24dbd91a4eb621e3759fd1c2adb0fd6e3ec44e1a0f5bb45fa90".into(),
             patch: json!({"com.maskbook.tip":[{"created_at":"1650188620","identity":"0x8c5494d05b4f18639834a0f1f4577d5c0a67adf0","invalid_reason":"","isDefault":0,"isPublic":1,"is_valid":true,"last_checked_at":"1650188620","platform":"ethereum"},{"created_at":"1650195158","identity":"0x2ec8ebb0a8eaa40e4ce620cf9f84a96df68d4669","invalid_reason":"","isDefault":1,"isPublic":1,"is_valid":true,"last_checked_at":"1650195158","platform":"ethereum"}]}),
             created_at: 1650209531,
             previous: None,
         };
-        let expected_payload = r#"{"version":"1","uuid":"b333f060-2cdd-4a7f-8fb1-c790c0fadc20","persona":"04b0a3ebb1fb9b7f3ba7653dfb8776e9db5de537e8cd6c4b9cc927cbbcdc394018b99ab0ebafec620820056af9fe162dda5c536b408aedacbd2cdd79db7f56ef91","platform":"nextid","identity":"0x03b0a3ebb1fb9b7f3ba7653dfb8776e9db5de537e8cd6c4b9cc927cbbcdc394018","patch":{"com.maskbook.tip":[{"created_at":"1650188620","identity":"0x8c5494d05b4f18639834a0f1f4577d5c0a67adf0","invalid_reason":"","isDefault":0,"isPublic":1,"is_valid":true,"last_checked_at":"1650188620","platform":"ethereum"},{"created_at":"1650195158","identity":"0x2ec8ebb0a8eaa40e4ce620cf9f84a96df68d4669","invalid_reason":"","isDefault":1,"isPublic":1,"is_valid":true,"last_checked_at":"1650195158","platform":"ethereum"}]},"created_at":1650209531,"previous":null}"#;
+        let expected_payload = r#"{"version":"1","uuid":"b333f060-2cdd-4a7f-8fb1-c790c0fadc20","avatar":"04e108f03e61a7e24dbd91a4eb621e3759fd1c2adb0fd6e3ec44e1a0f5bb45fa90d83378348df27416d1f6bf7c15f4220bfce331684ccefae5d07b9f4bab9fdb61","platform":"nextid","identity":"0x03e108f03e61a7e24dbd91a4eb621e3759fd1c2adb0fd6e3ec44e1a0f5bb45fa90","patch":{"com.maskbook.tip":[{"created_at":"1650188620","identity":"0x8c5494d05b4f18639834a0f1f4577d5c0a67adf0","invalid_reason":"","isDefault":0,"isPublic":1,"is_valid":true,"last_checked_at":"1650188620","platform":"ethereum"},{"created_at":"1650195158","identity":"0x2ec8ebb0a8eaa40e4ce620cf9f84a96df68d4669","invalid_reason":"","isDefault":1,"isPublic":1,"is_valid":true,"last_checked_at":"1650195158","platform":"ethereum"}]},"created_at":1650209531,"previous":null}"#;
 
         assert_eq!(
             serde_json::to_string(&payload)?,
             expected_payload.to_string()
         );
-        let signature = util::base64_to_vec(&"CNn87foZQt8AY+yRA/ys2/99zlD6gEnph3ujaIdQXxlKdHB41Ev+/rS/fzIULuWrljGreVbR/hRHL7RB51jIfRs=".into())?;
+        let signature = util::base64_to_vec("VKtrENhPv8SpJF0By2jIy1/xP3KkUlla/AXEWyhjPiJv99FXa0yQDVvF8allspgfQWeh/5fzR6eRWPcNriC0zgE=")?;
         let pubkey_recovered =
             Secp256k1KeyPair::recover_from_personal_signature(&signature, &expected_payload)?;
         assert_eq!(public_key, pubkey_recovered);
 
-        let conn = model::establish_connection();
-        let mut new_kv = NewKVChain::for_persona(&conn, &public_key)?;
+        let mut conn = model::establish_connection();
+        let mut new_kv = NewKVChain::for_persona(&mut conn, &public_key)?;
         new_kv.platform = payload.platform;
         new_kv.identity = payload.identity;
         new_kv.signature = signature;

@@ -16,8 +16,7 @@ use crate::{
 };
 
 #[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, Debug)]
-#[table_name = "kv_chains"]
-#[belongs_to(KVChain, foreign_key = "previous_id")]
+#[diesel(table_name = kv_chains, belongs_to(KVChain, foreign_key = previous_id))]
 pub struct KVChain {
     pub id: i32,
     pub uuid: Uuid,
@@ -33,7 +32,7 @@ pub struct KVChain {
 }
 
 #[derive(Insertable, Clone, Debug)]
-#[table_name = "kv_chains"]
+#[diesel(table_name = kv_chains)]
 pub struct NewKVChain {
     pub uuid: Uuid,
     pub persona: Vec<u8>,
@@ -61,7 +60,7 @@ pub struct SignPayload {
 impl NewKVChain {
     /// Generate a new KVChain append request for given persona.
     pub fn for_persona(
-        conn: &PgConnection,
+        conn: &mut PgConnection,
         persona_given: &PublicKey,
     ) -> Result<NewKVChain, Error> {
         let last_link = KVChain::find_last_link(conn, persona_given)?;
@@ -93,11 +92,11 @@ impl NewKVChain {
     pub fn generate_signature_payload(&self) -> Result<SignPayload, Error> {
         let mut previous_sig: Option<String> = None;
         if let Some(prev_id) = self.previous_id {
-            let conn = establish_connection();
+            let mut conn = establish_connection();
             let prev_kv_sig_bytes = kv_chains
                 .select(signature)
                 .filter(id.eq(prev_id))
-                .get_result::<Vec<u8>>(&conn)
+                .get_result::<Vec<u8>>(&mut conn)
                 .map_err(|e| Error::from(e))?;
             previous_sig = Some(vec_to_base64(&prev_kv_sig_bytes));
         }
@@ -140,7 +139,7 @@ impl NewKVChain {
     }
 
     /// Save myself into DB.
-    pub fn finalize(&self, conn: &PgConnection) -> Result<KVChain, Error> {
+    pub fn finalize(&self, conn: &mut PgConnection) -> Result<KVChain, Error> {
         insert_into(kv_chains)
             .values(self)
             .get_result(conn)
@@ -152,7 +151,7 @@ impl KVChain {
     /// Find last link of given persona.
     /// `None` if not found.
     pub fn find_last_link(
-        conn: &PgConnection,
+        conn: &mut PgConnection,
         persona_pubkey: &PublicKey,
     ) -> Result<Option<KVChain>, Error> {
         let persona_bytes = persona_pubkey.serialize().to_vec();
@@ -165,7 +164,7 @@ impl KVChain {
     }
 
     /// Perform patch on KV record.
-    pub fn perform_patch(&self, conn: &PgConnection) -> Result<KV, Error> {
+    pub fn perform_patch(&self, conn: &mut PgConnection) -> Result<KV, Error> {
         use crate::model::kv;
 
         let Secp256k1KeyPair {

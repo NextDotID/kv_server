@@ -15,7 +15,7 @@ mod tests {
         schema::kv::dsl::*,
     };
 
-    fn before_each(connection: &PgConnection) -> Result<(), Error> {
+    fn before_each(connection: &mut PgConnection) -> Result<(), Error> {
         let _ = env_logger::try_init();
         // Clear DB
         diesel::delete(kv).execute(connection)?;
@@ -25,45 +25,45 @@ mod tests {
 
     #[test]
     fn test_find_or_create_success() -> Result<(), Error> {
-        let c = establish_connection();
-        before_each(&c)?;
+        let mut c = establish_connection();
+        before_each(&mut c)?;
         let username: String = Faker.fake();
 
         let Secp256k1KeyPair {
             public_key: pubkey,
             secret_key: _,
         } = Secp256k1KeyPair::from_pubkey_hex(&PUBKEY.to_string())?;
-        let (kv_created, is_found) = find_or_create(&c, "twitter", &username, &pubkey).unwrap();
+        let (kv_created, is_found) = find_or_create(&mut c, "twitter", &username, &pubkey).unwrap();
         assert_eq!(is_found, false);
         assert_eq!(kv_created.platform, "twitter".to_string());
         assert_eq!(kv_created.identity, username);
         assert_eq!(kv_created.uuid, None);
         assert!(kv_created.content.is_object());
 
-        let (_new_kv, is_found_2) = find_or_create(&c, "twitter", &username, &pubkey).unwrap();
+        let (_new_kv, is_found_2) = find_or_create(&mut c, "twitter", &username, &pubkey).unwrap();
         assert!(is_found_2);
         Ok(())
     }
 
     #[test]
     fn test_patch() -> Result<(), Error> {
-        let c = establish_connection();
-        before_each(&c)?;
+        let mut c = establish_connection();
+        before_each(&mut c)?;
         let username: String = Faker.fake();
         let Secp256k1KeyPair {
             public_key: pubkey,
             secret_key: _,
         }: Secp256k1KeyPair = Secp256k1KeyPair::from_pubkey_hex(&PUBKEY.to_string())?;
 
-        let (kv_created, _) = find_or_create(&c, "twitter", &username, &pubkey)?;
-        kv_created.patch(&c, &json!({"test": "abc"}))?;
+        let (kv_created, _) = find_or_create(&mut c, "twitter", &username, &pubkey)?;
+        kv_created.patch(&mut c, &json!({"test": "abc"}))?;
 
-        let (kv_found, _) = find_or_create(&c, "twitter", &username, &pubkey)?;
+        let (kv_found, _) = find_or_create(&mut c, "twitter", &username, &pubkey)?;
         assert_eq!(kv_found.content, json!({"test": "abc"}));
 
-        kv_found.patch(&c, &json!({ "test": null }))?;
+        kv_found.patch(&mut c, &json!({ "test": null }))?;
 
-        let (kv_found_2, _) = find_or_create(&c, "twitter", &username, &pubkey)?;
+        let (kv_found_2, _) = find_or_create(&mut c, "twitter", &username, &pubkey)?;
         assert_eq!(kv_found_2.content, json!({}));
 
         Ok(())
@@ -71,17 +71,17 @@ mod tests {
 
     #[test]
     fn test_find_all_by_persona() -> Result<(), Error> {
-        let c = establish_connection();
-        before_each(&c)?;
+        let mut c = establish_connection();
+        before_each(&mut c)?;
         let username: String = Faker.fake();
         let Secp256k1KeyPair {
             public_key: pubkey,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
 
-        find_or_create(&c, "twitter", &username, &pubkey).unwrap();
+        find_or_create(&mut c, "twitter", &username, &pubkey).unwrap();
 
-        let result = find_all_by_persona(&c, &pubkey).unwrap();
+        let result = find_all_by_persona(&mut c, &pubkey).unwrap();
         assert_eq!(result.len(), 1);
         Ok(())
     }
