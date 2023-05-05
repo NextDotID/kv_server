@@ -17,3 +17,27 @@ for each single entity in [[https://github.com/nextdotid/proof-server][proof-ser
 - [X] Each entity should has its own KV storage (theoretically unlimited space).
 - [X] No limitation for value: store any JSON-compatable structure.
 - [X] Nested =set= / =del= value.
+
+* development
+** Windows
+Because diesel depends on the libpq for the PostgreSQL backend, 
+you'll need to install the libpq with [[https://github.com/microsoft/vcpkg][vcpkg]] and [[https://docs.rs/vcpkg/0.2.15/vcpkg/index.html#vcpkg_cli][vcpkg_cli]].
+
+1. Install vcpkg and libpq and vcpkg_cli
+#+BEGIN_SRC sh
+  # install vcpkg ...
+  vcpkg install libpq:x64-windows
+  cargo install vcpkg_cli
+#+END_SRC
+2. set environment variable and set toolchain
+#+BEGIN_SRC sh
+  set VCPKGRS_DYNAMIC=1
+  set VCPKG_ROOT=your\vcpkgrepo\root
+  rustup toolchain install stable-msvc
+  rustup default stable-msvc
+#+END_SRC
+3. probe libpq
+#+BEGIN_SRC sh
+  vcpkg_cli probe libpq
+#+END_SRC
+
