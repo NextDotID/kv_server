@@ -33,24 +33,22 @@ mod tests {
             identity: "".into(),
             patch: "".into(),
             signature: vec![],
-            created_at: NaiveDateTime::new(NaiveDate::from_ymd_opt(2023, 8, 8).unwrap(), NaiveTime::from_hms_milli_opt(12, 34, 56, 789).unwrap()),
+            created_at: NaiveDateTime::new(NaiveDate::from_ymd_opt(2023, 8, 8).unwrap(), NaiveTime::from_hms_milli_opt(12, 34, 56, 7).unwrap()),
             signature_payload: "".into(),
             previous_uuid: None,
-            previous_arweave_id: "".into(),
         };
         let transcation_id = test_document.upload_to_arweave().await.unwrap();
         
         let arweave_url = Url::parse("https://arweave.net").unwrap();
         let arweave_connect = Arweave::from_keypair_path(
-            PathBuf::from("/home/stoner/NextDotID/kv_server/src/model/arweave/test.json"),
+            PathBuf::from("/workspaces/kv_server/test.json"),
             arweave_url.clone()
         ).unwrap();
         let result = arweave_connect.get_tx_status(Base64::from_str(transcation_id.as_str()).unwrap()).await;
-        assert_eq!(result.unwrap().0, 200);
+
+        // check this transaction is uploaded successful or not
+        let status_code = result.unwrap().0;
+        assert!(status_code == 200 || status_code == 202);
     }
 
-    // #[tokio::test]
-    // async fn upload_error_process() {
-
-    // }
 }

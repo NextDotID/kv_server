@@ -21,5 +21,5 @@ pub fn naive_now() -> NaiveDateTime {
 
 /// Convert timestamp into NaiveDateTime struct.
 pub fn timestamp_to_naive(ts: i64) -> NaiveDateTime {
-    NaiveDateTime::from_timestamp(ts, 0)
+    NaiveDateTime::from_timestamp_opt(ts, 0).unwrap()
 }

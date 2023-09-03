@@ -60,7 +60,6 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
         created_at: new_kv.created_at,
         signature_payload: new_kv.signature_payload.clone(),
         previous_uuid: None,
-        previous_arweave_id: "".into(),
     };
     new_kv.arweave_id = arweave_document.upload_to_arweave().await;
 
@@ -168,7 +167,7 @@ mod tests {
 
         let req_body = UploadRequest {
             persona: Some(compress_public_key(&keypair.public_key)),
-            avatar: None,
+            avatar: Some(compress_public_key(&keypair.public_key)),
             platform: new_kv_chain.platform.clone(),
             identity: new_kv_chain.identity,
             signature: vec_to_base64(&new_kv_chain.signature),
