@@ -33,6 +33,10 @@ pub enum Error {
     Base64Error(#[from] base64::DecodeError),
     #[error("UUID parse error: {0}")]
     UuidParseError(#[from] uuid::Error),
+    #[error("URL parse error: {0}")]
+    UrlParseError(#[from] url::ParseError),
+    #[error("arweave error: {0}")]
+    ArweaveError(#[from] arweave_rs::error::Error),
 }
 // Todo: from their Error to our Error
 // @Todo: 分情况讨论
@@ -54,6 +58,8 @@ impl Error {
             Error::SignatureValidationError(_) => StatusCode::BAD_REQUEST,
             Error::Base64Error(_) => StatusCode::BAD_REQUEST,
             Error::UuidParseError(_) => StatusCode::BAD_REQUEST,
+            Error::UrlParseError(_) => StatusCode::BAD_REQUEST,
+            Error::ArweaveError(_) => StatusCode::BAD_REQUEST,
         }
     }
 }

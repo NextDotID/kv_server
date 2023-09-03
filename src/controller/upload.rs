@@ -61,7 +61,11 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
         signature_payload: new_kv.signature_payload.clone(),
         previous_uuid: None,
     };
-    new_kv.arweave_id = arweave_document.upload_to_arweave().await;
+    
+    new_kv.arweave_id = match arweave_document.upload_to_arweave().await {
+        Ok(id) => Some(id),
+        Err(_) => None,
+    };
 
     // Valid. Insert it.
     let kv_link = new_kv.finalize(&mut conn)?;

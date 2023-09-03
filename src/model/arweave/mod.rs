@@ -8,6 +8,8 @@ use arweave_rs::{Arweave, crypto::base64::Base64};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use crate::error::Error;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct KVChainArweaveDocument {
     pub avatar: String,
@@ -24,21 +26,21 @@ pub struct KVChainArweaveDocument {
 
 impl KVChainArweaveDocument {
 
-    pub async fn upload_to_arweave(self) -> Option<String> {
+    pub async fn upload_to_arweave(self) -> Result<String, Error> {
         // create the signer
-        let arweave_url = Url::parse("https://arweave.net").unwrap();
+        let arweave_url = Url::parse("https://arweave.net")?;
         let arweave_connect = Arweave::from_keypair_path(
             PathBuf::from("/workspaces/kv_server/test.json"),
             arweave_url.clone()
-        ).unwrap();
+        )?;
 
         // first get the previous_uuid and previous_arweave_id by the arweave_id
         let _wallet = arweave_rs::wallet::WalletInfoClient::new(arweave_url);
-        let _address = arweave_connect.get_wallet_address().unwrap();
+        let _address = arweave_connect.get_wallet_address()?;
         
         let target = Base64(vec![]);
-        let data = serde_json::to_vec(&self).unwrap();
-        let fee = arweave_connect.get_fee(target.clone(), data.clone()).await.unwrap();
+        let data = serde_json::to_vec(&self)?;
+        let fee = arweave_connect.get_fee(target.clone(), data.clone()).await?;
         let send_transaction = arweave_connect.create_transaction(
             target,
             vec![],
@@ -46,13 +48,13 @@ impl KVChainArweaveDocument {
             0,
             fee,
             true
-        ).await.unwrap();
+        ).await?;
         
-        let signed_transaction = arweave_connect.sign_transaction(send_transaction).unwrap();
-        let result = arweave_connect.post_transaction(&signed_transaction).await.unwrap();
+        let signed_transaction = arweave_connect.sign_transaction(send_transaction)?;
+        let result = arweave_connect.post_transaction(&signed_transaction).await?;
         
         // return the transcation id to user
-        Some(result.0)
+        Ok(result.0)
     }
 }
 

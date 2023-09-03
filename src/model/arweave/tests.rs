@@ -51,4 +51,10 @@ mod tests {
         assert!(status_code == 200 || status_code == 202);
     }
 
+    /// Check the upload data on arweave is correct or not
+    #[tokio::test]
+    async fn test_check_data() {
+
+    }
+
 }
