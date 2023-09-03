@@ -3,7 +3,7 @@ use crate::{
     controller::{json_parse_body, Request, Response},
     crypto::secp256k1::Secp256k1KeyPair,
     error::Error,
-    model::{self, kv_chains::NewKVChain},
+    model::{self, kv_chains::NewKVChain, arweave::KVChainArweaveDocument},
     proof_client::can_set_kv,
     util::{base64_to_vec, timestamp_to_naive},
 };
@@ -25,6 +25,7 @@ struct UploadRequest {
 pub async fn controller(request: Request) -> Result<Response, Error> {
     let req: UploadRequest = json_parse_body(&request)?;
     let sig = base64_to_vec(&req.signature)?;
+    let avatar = req.avatar.clone();
     let persona = Secp256k1KeyPair::from_pubkey_hex(
         &req.avatar
             .or(req.persona)
@@ -47,8 +48,25 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     // Validate signature
     new_kv.validate()?;
 
+    // Try take the kvchain data upload to the arweave.
+    let arweave_document = KVChainArweaveDocument{
+        avatar: avatar.unwrap(),
+        uuid: uuid,
+        persona: vec![],
+        platform: new_kv.platform.clone(),
+        identity: new_kv.identity.clone(),
+        patch: new_kv.patch.clone(),
+        signature: new_kv.signature.clone(),
+        created_at: new_kv.created_at,
+        signature_payload: new_kv.signature_payload.clone(),
+        previous_uuid: None,
+        previous_arweave_id: "".into(),
+    };
+    new_kv.arweave_id = arweave_document.upload_to_arweave().await;
+
     // Valid. Insert it.
     let kv_link = new_kv.finalize(&mut conn)?;
+
     // Apply patch
     kv_link.perform_patch(&mut conn)?;
 
@@ -83,6 +101,7 @@ mod tests {
             signature: vec![],
             signature_payload: "".into(),
             created_at: naive_now(),
+            arweave_id: None,
         };
         new_kv_chain.signature = new_kv_chain.sign(&keypair).unwrap();
 
@@ -142,6 +161,7 @@ mod tests {
             signature: vec![],
             signature_payload: "".into(),
             created_at: naive_now(),
+            arweave_id: None,
         };
         let sig = new_kv_chain.sign(&keypair).unwrap();
         new_kv_chain.signature = sig;

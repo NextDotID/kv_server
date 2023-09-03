@@ -40,6 +40,7 @@ mod tests {
                 signature: vec![1],
                 signature_payload: "".into(),
                 created_at: naive_now(),
+                arweave_id: None,
             })
             .get_result(conn)
             .map_err(|e| e.into())
@@ -82,6 +83,7 @@ mod tests {
             signature: vec![2],
             signature_payload: "".into(),
             created_at: naive_now(),
+            arweave_id: None,
         };
         let new_link = new_kvchain.finalize(&mut conn)?;
         assert_eq!(new_link.previous_id.unwrap(), link.id);

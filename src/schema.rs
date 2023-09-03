@@ -24,6 +24,7 @@ table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         signature_payload -> Varchar,
+        arweave_id -> Nullable<Varchar>,
     }
 }
 

@@ -34,6 +34,8 @@ pub enum Error {
     #[error("UUID parse error: {0}")]
     UuidParseError(#[from] uuid::Error),
 }
+// Todo: from their Error to our Error
+// @Todo: 分情况讨论
 
 impl Error {
     pub fn http_status(&self) -> StatusCode {

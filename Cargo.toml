@@ -46,5 +46,8 @@ base64 = "0.13"
 hex = "0.4"
 hex-literal = "0.3"
 
+# arweave
+arweave-rs = "0.1.2"
+
 [dev_dependencies]
 fake = "2.4"

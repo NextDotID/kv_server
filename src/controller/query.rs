@@ -16,6 +16,7 @@ pub struct QueryResponse {
     pub persona: String,
     pub avatar: String,
     pub proofs: Vec<QueryResponseSingleProof>,
+    pub arweave_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,6 +54,7 @@ pub fn query_response(
         persona: format!("0x{}", persona_hex),
         avatar: format!("0x{}", persona_hex),
         proofs: vec![],
+        arweave_id: None,
     };
     for proof in results.into_iter() {
         let proof_single = QueryResponseSingleProof {

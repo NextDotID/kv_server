@@ -29,6 +29,7 @@ pub struct KVChain {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub signature_payload: String,
+    pub arweave_id: Option<String>,
 }
 
 #[derive(Insertable, Clone, Debug)]
@@ -43,6 +44,7 @@ pub struct NewKVChain {
     pub signature: Vec<u8>,
     pub signature_payload: String,
     pub created_at: NaiveDateTime,
+    pub arweave_id: Option<String>, 
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -80,6 +82,7 @@ impl NewKVChain {
             signature: vec![],
             signature_payload: "".into(),
             created_at: naive_now(),
+            arweave_id: None,
         })
     }
 
