@@ -59,7 +59,7 @@ impl Error {
             Error::Base64Error(_) => StatusCode::BAD_REQUEST,
             Error::UuidParseError(_) => StatusCode::BAD_REQUEST,
             Error::UrlParseError(_) => StatusCode::BAD_REQUEST,
-            Error::ArweaveError(_) => StatusCode::BAD_REQUEST,
+            Error::ArweaveError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

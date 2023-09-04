@@ -50,8 +50,8 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
 
     // Try take the kvchain data upload to the arweave.
     let arweave_document = KVChainArweaveDocument{
-        avatar: avatar.unwrap(),
-        uuid: uuid,
+        avatar: avatar.unwrap_or("".into()),
+        uuid,
         persona: vec![],
         platform: new_kv.platform.clone(),
         identity: new_kv.identity.clone(),
@@ -62,10 +62,7 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
         previous_uuid: None,
     };
     
-    new_kv.arweave_id = match arweave_document.upload_to_arweave().await {
-        Ok(id) => Some(id),
-        Err(_) => None,
-    };
+    new_kv.arweave_id = arweave_document.upload_to_arweave().await.ok();
 
     // Valid. Insert it.
     let kv_link = new_kv.finalize(&mut conn)?;
@@ -74,6 +71,7 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     kv_link.perform_patch(&mut conn)?;
 
     // All done. Build response.
+    // @Todo: fix this response problem, because arweave_id is not normal return!
     let response = query_response(&mut conn, &persona.public_key)?;
     json_response(StatusCode::CREATED, &response)
 }

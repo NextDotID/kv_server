@@ -8,7 +8,7 @@ use arweave_rs::{Arweave, crypto::base64::Base64};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::error::Error;
+use crate::{config::C, error::Error};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct KVChainArweaveDocument {
@@ -28,9 +28,9 @@ impl KVChainArweaveDocument {
 
     pub async fn upload_to_arweave(self) -> Result<String, Error> {
         // create the signer
-        let arweave_url = Url::parse("https://arweave.net")?;
+        let arweave_url = Url::parse(C.arweave.url.as_str())?;
         let arweave_connect = Arweave::from_keypair_path(
-            PathBuf::from("/workspaces/kv_server/test.json"),
+            PathBuf::from(C.arweave.jwt.as_str()),
             arweave_url.clone()
         )?;
 

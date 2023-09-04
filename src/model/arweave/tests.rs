@@ -9,11 +9,12 @@ mod tests {
     use uuid::Uuid;
 
     use crate::model::arweave::KVChainArweaveDocument;
-    
+    use crate::config::C;
+
     /// We will test current network is work or not
     #[tokio::test]
     async fn test_network_work() {
-        let arweave_url = Url::parse("https://arweave.net").unwrap();
+        let arweave_url = Url::parse(C.arweave.url.as_str()).unwrap();
         let network_client = NetworkInfoClient::new(arweave_url);
         let _ = match network_client.network_info().await {
             Ok(message) => message,
@@ -39,11 +40,12 @@ mod tests {
         };
         let transcation_id = test_document.upload_to_arweave().await.unwrap();
         
-        let arweave_url = Url::parse("https://arweave.net").unwrap();
+        let arweave_url = Url::parse(C.arweave.url.as_str()).unwrap();
         let arweave_connect = Arweave::from_keypair_path(
-            PathBuf::from("/workspaces/kv_server/test.json"),
+            PathBuf::from(C.arweave.jwt.as_str()),
             arweave_url.clone()
         ).unwrap();
+
         let result = arweave_connect.get_tx_status(Base64::from_str(transcation_id.as_str()).unwrap()).await;
 
         // check this transaction is uploaded successful or not

@@ -27,6 +27,7 @@ pub struct KVConfig {
     pub db: ConfigDB,
     pub web: ConfigWeb,
     pub proof_service: ConfigProofService,
+    pub arweave: ConfigArwave,
 }
 
 #[derive(Clone, Deserialize, Default)]
@@ -49,11 +50,18 @@ pub struct ConfigProofService {
     pub url: String,
 }
 
+#[derive(Clone, Deserialize, Default)]
+pub struct ConfigArwave {
+    pub jwt: String,
+    pub url: String,
+}
+
 #[derive(Clone, Deserialize)]
 pub enum ConfigCategory {
     File,
     AWSSecret,
 }
+
 impl Default for ConfigCategory {
     fn default() -> Self {
         Self::File
