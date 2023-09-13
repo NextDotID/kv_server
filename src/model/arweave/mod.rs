@@ -21,7 +21,8 @@ pub struct KVChainArweaveDocument {
     pub signature: Vec<u8>,
     pub created_at: NaiveDateTime,
     pub signature_payload: String,
-    pub previous_uuid: Option<Uuid>,
+    pub previous_id: Option<i32>,
+    pub previous_arweave_id: Option<String>, 
 }    
 
 impl KVChainArweaveDocument {
@@ -33,10 +34,6 @@ impl KVChainArweaveDocument {
             PathBuf::from(C.arweave.jwt.as_str()),
             arweave_url.clone()
         )?;
-
-        // first get the previous_uuid and previous_arweave_id by the arweave_id
-        let _wallet = arweave_rs::wallet::WalletInfoClient::new(arweave_url);
-        let _address = arweave_connect.get_wallet_address()?;
         
         let target = Base64(vec![]);
         let data = serde_json::to_vec(&self)?;

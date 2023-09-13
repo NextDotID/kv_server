@@ -36,7 +36,8 @@ mod tests {
             signature: vec![],
             created_at: NaiveDateTime::new(NaiveDate::from_ymd_opt(2023, 8, 8).unwrap(), NaiveTime::from_hms_milli_opt(12, 34, 56, 7).unwrap()),
             signature_payload: "".into(),
-            previous_uuid: None,
+            previous_id: None,
+            previous_arweave_id: None,
         };
         let transcation_id = test_document.upload_to_arweave().await.unwrap();
         
@@ -56,6 +57,12 @@ mod tests {
     /// Check the upload data on arweave is correct or not
     #[tokio::test]
     async fn test_check_data() {
+
+    }
+
+    /// Check the last arweave whether is correct or not
+    #[tokio::test]
+    async fn test_check_last_arweave() {
 
     }
 

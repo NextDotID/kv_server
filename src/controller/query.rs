@@ -16,7 +16,6 @@ pub struct QueryResponse {
     pub persona: String,
     pub avatar: String,
     pub proofs: Vec<QueryResponseSingleProof>,
-    pub arweave_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +23,7 @@ pub struct QueryResponseSingleProof {
     pub platform: String,
     pub identity: String,
     pub content: serde_json::Value,
+    pub arweave_id: Option<String>,
 }
 
 pub async fn controller(req: Request) -> Result<Response, Error> {
@@ -54,13 +54,13 @@ pub fn query_response(
         persona: format!("0x{}", persona_hex),
         avatar: format!("0x{}", persona_hex),
         proofs: vec![],
-        arweave_id: None,
     };
     for proof in results.into_iter() {
         let proof_single = QueryResponseSingleProof {
             platform: proof.platform,
             identity: proof.identity,
             content: proof.content,
+            arweave_id: proof.arweave_id,
         };
         response.proofs.push(proof_single);
     }

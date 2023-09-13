@@ -8,6 +8,7 @@ table! {
         persona -> Bytea,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        arweave_id -> Nullable<Varchar>,
     }
 }
 

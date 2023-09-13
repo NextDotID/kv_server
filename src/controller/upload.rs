@@ -48,6 +48,8 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     // Validate signature
     new_kv.validate()?;
 
+    let previous_arweave_id = new_kv.clone().find_last_chain_arweave(&mut conn)?;
+
     // Try take the kvchain data upload to the arweave.
     let arweave_document = KVChainArweaveDocument{
         avatar: avatar.unwrap_or("".into()),
@@ -59,19 +61,27 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
         signature: new_kv.signature.clone(),
         created_at: new_kv.created_at,
         signature_payload: new_kv.signature_payload.clone(),
-        previous_uuid: None,
+        previous_id: new_kv.previous_id.clone(),
+        previous_arweave_id: previous_arweave_id.clone(),
     };
     
     new_kv.arweave_id = arweave_document.upload_to_arweave().await.ok();
+    // let (upload_sender, upload_receiver) = mpsc::channel();
+    // let background_upload_handle = thread::spawn(move || {
+    //     let mut rt = tokio::runtime::Runtime::new().unwrap();
+    //     rt.block_on(async {
+    //         let arweave_id = arweave_document.upload_to_arweave().await.ok();
+    //         upload_sender.send(arweave_id).unwrap();
+    //     });
+    // });
 
     // Valid. Insert it.
     let kv_link = new_kv.finalize(&mut conn)?;
 
     // Apply patch
-    kv_link.perform_patch(&mut conn)?;
+    kv_link.perform_patch(&mut conn, new_kv.arweave_id)?;
 
     // All done. Build response.
-    // @Todo: fix this response problem, because arweave_id is not normal return!
     let response = query_response(&mut conn, &persona.public_key)?;
     json_response(StatusCode::CREATED, &response)
 }

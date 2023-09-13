@@ -3,3 +3,6 @@
 ALTER TABLE kv_chains
 DROP COLUMN areweave_id;
 
+ALTER TABLE kv
+DROP COLUMN areweave_id;
+

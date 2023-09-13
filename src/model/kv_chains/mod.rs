@@ -148,6 +148,28 @@ impl NewKVChain {
             .get_result(conn)
             .map_err(|e| e.into())
     }
+
+
+    pub fn find_last_chain_arweave(
+        self,
+        conn: &mut PgConnection,
+    ) -> Result<Option<String>, Error> {
+
+        if self.previous_id.is_none() {
+            return Ok(None);
+        }
+
+        let found: Option<KVChain> = kv_chains
+            .filter(id.eq(self.previous_id.unwrap()))
+            .get_result(conn)
+            .optional()?;
+
+        if let Some(kv_chain) = found {
+            Ok(kv_chain.arweave_id)
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 impl KVChain {
@@ -167,7 +189,7 @@ impl KVChain {
     }
 
     /// Perform patch on KV record.
-    pub fn perform_patch(&self, conn: &mut PgConnection) -> Result<KV, Error> {
+    pub fn perform_patch(&self, conn: &mut PgConnection, new_arweave: Option<String>) -> Result<KV, Error> {
         use crate::model::kv;
 
         let Secp256k1KeyPair {
@@ -178,7 +200,8 @@ impl KVChain {
         let (kv_record, _is_new) =
             kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
         kv_record.patch(conn, &self.patch)?;
-
+        kv_record.update_arweave(conn, new_arweave)?;
+        
         Ok(kv_record)
     }
 }
