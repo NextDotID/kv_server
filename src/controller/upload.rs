@@ -65,15 +65,9 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
         previous_arweave_id: previous_arweave_id.clone(),
     };
     
-    new_kv.arweave_id = arweave_document.upload_to_arweave().await.ok();
-    // let (upload_sender, upload_receiver) = mpsc::channel();
-    // let background_upload_handle = thread::spawn(move || {
-    //     let mut rt = tokio::runtime::Runtime::new().unwrap();
-    //     rt.block_on(async {
-    //         let arweave_id = arweave_document.upload_to_arweave().await.ok();
-    //         upload_sender.send(arweave_id).unwrap();
-    //     });
-    // });
+    let arweave_upload_future = tokio::spawn(async move {
+        arweave_document.upload_to_arweave().await.ok()
+    });
 
     // Valid. Insert it.
     let kv_link = new_kv.finalize(&mut conn)?;
@@ -83,6 +77,9 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
 
     // All done. Build response.
     let response = query_response(&mut conn, &persona.public_key)?;
+
+    new_kv.arweave_id = arweave_upload_future.await.unwrap();
+
     json_response(StatusCode::CREATED, &response)
 }
 
