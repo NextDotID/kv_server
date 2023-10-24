@@ -64,21 +64,21 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
         previous_id: new_kv.previous_id.clone(),
         previous_arweave_id: previous_arweave_id.clone(),
     };
-    
-    let arweave_upload_future = tokio::spawn(async move {
-        arweave_document.upload_to_arweave().await.ok()
-    });
 
     // Valid. Insert it.
     let kv_link = new_kv.finalize(&mut conn)?;
 
     // Apply patch
-    kv_link.perform_patch(&mut conn, new_kv.arweave_id)?;
+    kv_link.perform_patch(&mut conn)?;
 
     // All done. Build response.
     let response = query_response(&mut conn, &persona.public_key)?;
 
-    new_kv.arweave_id = arweave_upload_future.await.unwrap();
+    // Upload to arweave
+    tokio::spawn(async move {
+        let result = arweave_document.upload_to_arweave().await.ok();
+        let _ = kv_link.insert_arweave_id(&mut conn, result);
+    });
 
     json_response(StatusCode::CREATED, &response)
 }
@@ -197,6 +197,9 @@ mod tests {
         let proof = resp_body.proofs.first().unwrap();
         assert_eq!(proof.content, json!({"test2": "new kv"}));
     }
+
+    // #[tokio::test]
+    // async fn test_upload_
 
     // NOTE: test below is created with `persona:` sig payload.
     // #[tokio::test]

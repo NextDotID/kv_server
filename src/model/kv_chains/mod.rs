@@ -149,7 +149,7 @@ impl NewKVChain {
             .map_err(|e| e.into())
     }
 
-
+    /// Find last chain arweave id.
     pub fn find_last_chain_arweave(
         self,
         conn: &mut PgConnection,
@@ -189,7 +189,7 @@ impl KVChain {
     }
 
     /// Perform patch on KV record.
-    pub fn perform_patch(&self, conn: &mut PgConnection, new_arweave: Option<String>) -> Result<KV, Error> {
+    pub fn perform_patch(&self, conn: &mut PgConnection) -> Result<KV, Error> {
         use crate::model::kv;
 
         let Secp256k1KeyPair {
@@ -200,8 +200,52 @@ impl KVChain {
         let (kv_record, _is_new) =
             kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
         kv_record.patch(conn, &self.patch)?;
-        kv_record.update_arweave(conn, new_arweave)?;
         
         Ok(kv_record)
     }
+
+    /// Insert arweave id into kv and kv_chains.
+    pub fn insert_arweave_id(&self, conn: &mut PgConnection, new_arweave: Option<String>) -> Result<(), Error> {
+        
+        use crate::model::kv;
+        
+        // insert arweave id into table kv
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::from_pubkey_vec(&self.persona)?;
+
+        let (kv_record, _is_new) =
+            kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
+        kv_record.update_arweave(conn, new_arweave.clone())?;
+        
+        // insert arweave id into table kv_chains
+        diesel::update(self)
+            .set(arweave_id.eq(new_arweave))
+            .execute(conn)
+            .map_err(|e| Error::from(e))?;
+
+        Ok(())
+    }
+}
+
+
+/// Returns (KVChain, is_founded)
+pub fn find_kv_chain_by_id(
+    conn: &mut PgConnection,
+    other_id: i32,
+) -> Result<(KVChain, bool), Error> {
+
+    let found = kv_chains
+        .filter(id.eq(other_id))
+        .first(conn)
+        .optional()?;
+
+    // Found
+    if found.is_some() {
+        return Ok((found.unwrap(), true));
+    } 
+    
+    // Not found
+    Ok((found.unwrap(), false))
 }
