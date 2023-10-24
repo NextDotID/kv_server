@@ -10,7 +10,7 @@ mod tests {
         error::Error,
         model::{
             establish_connection,
-            kv_chains::{KVChain, NewKVChain, find_kv_chain_by_id},
+            kv_chains::{KVChain, NewKVChain, find_kv_chain_by_id}, kv::find_all_by_persona,
         },
         schema::kv_chains::dsl::*,
         util::{naive_now, vec_to_base64},
@@ -157,11 +157,17 @@ mod tests {
 
         let link = create_link_and_insert(&mut conn, &public_key, None)?;
         assert_eq!(link.arweave_id, None);
-
+        
+        // check it whether insert arweave id into kv_chains table
         let _ = link.insert_arweave_id(&mut conn, insert_arweave_id.clone());
         let (find_link, is_found) = find_kv_chain_by_id(&mut conn, link.id)?;
         assert!(is_found);
         assert_eq!(find_link.arweave_id, insert_arweave_id);
+
+        // check it whether insert arweave id into kv table
+        let kvs = find_all_by_persona(&mut conn, &public_key)?;
+        assert_eq!(kvs.len(), 1);
+        assert_eq!(kvs[0].arweave_id, insert_arweave_id);
 
         Ok(())
     }

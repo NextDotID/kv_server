@@ -4,12 +4,12 @@ mod tests {
     use std::{path::PathBuf, str::FromStr}; 
 
     use arweave_rs::{Arweave, crypto::base64::Base64, network::NetworkInfoClient};
-    use chrono::NaiveDate;
     use url::Url;
     use uuid::Uuid;
 
     use crate::model::arweave::KVChainArweaveDocument;
     use crate::config::C;
+    use crate::util::naive_now;
 
 
     fn prepare_test_document() -> KVChainArweaveDocument {
@@ -21,7 +21,7 @@ mod tests {
             identity: "".into(),
             patch: "".into(),
             signature: vec![],
-            created_at: NaiveDate::from_ymd_opt(2023, 8, 8).unwrap().and_hms_milli_opt(12, 34, 56, 7).unwrap(),
+            created_at: naive_now(),
             signature_payload: "".into(),
             previous_id: None,
             previous_arweave_id: None,

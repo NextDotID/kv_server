@@ -249,3 +249,18 @@ pub fn find_kv_chain_by_id(
     // Not found
     Ok((found.unwrap(), false))
 }
+
+/// Find all KVChains belongs to given platform-identity pair.
+pub fn find_all_by_identity(
+    conn: &mut PgConnection,
+    platform_given: &str,
+    identity_given: &str,
+) -> Result<Vec<KVChain>, Error> {
+
+    let result: Vec<KVChain> = kv_chains
+        .filter(platform.eq(platform_given))
+        .filter(identity.eq(identity_given))
+        .get_results(conn)?;
+
+    Ok(result)
+}

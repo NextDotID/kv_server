@@ -38,8 +38,6 @@ pub enum Error {
     #[error("arweave error: {0}")]
     ArweaveError(#[from] arweave_rs::error::Error),
 }
-// Todo: from their Error to our Error
-// @Todo: 分情况讨论
 
 impl Error {
     pub fn http_status(&self) -> StatusCode {

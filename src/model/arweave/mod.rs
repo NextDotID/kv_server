@@ -10,6 +10,8 @@ use url::Url;
 
 use crate::{config::C, error::Error};
 
+/// A KVChainArweaveDocument is a struct that represents the data that is uploaded to Arweave.
+/// It is a subset of the KVChain struct, and is used to permantently store the data on Arweave.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct KVChainArweaveDocument {
     pub avatar: String,
@@ -28,6 +30,7 @@ pub struct KVChainArweaveDocument {
 impl KVChainArweaveDocument {
 
     pub async fn upload_to_arweave(self) -> Result<String, Error> {
+
         // create the signer
         let arweave_url = Url::parse(C.arweave.url.as_str())?;
         let arweave_connect = Arweave::from_keypair_path(
@@ -37,6 +40,7 @@ impl KVChainArweaveDocument {
         
         let target = Base64(vec![]);
         let data = serde_json::to_vec(&self)?;
+        // query the fee of upload and create the transaction
         let fee = arweave_connect.get_fee(target.clone(), data.clone()).await?;
         let send_transaction = arweave_connect.create_transaction(
             target,
@@ -53,5 +57,6 @@ impl KVChainArweaveDocument {
         // return the transcation id to user
         Ok(result.0)
     }
+
 }
 
