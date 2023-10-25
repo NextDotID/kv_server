@@ -29,6 +29,7 @@ pub struct KVChain {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub signature_payload: String,
+    pub arweave_id: Option<String>,
 }
 
 #[derive(Insertable, Clone, Debug)]
@@ -43,6 +44,7 @@ pub struct NewKVChain {
     pub signature: Vec<u8>,
     pub signature_payload: String,
     pub created_at: NaiveDateTime,
+    pub arweave_id: Option<String>, 
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -80,6 +82,7 @@ impl NewKVChain {
             signature: vec![],
             signature_payload: "".into(),
             created_at: naive_now(),
+            arweave_id: None,
         })
     }
 
@@ -145,6 +148,28 @@ impl NewKVChain {
             .get_result(conn)
             .map_err(|e| e.into())
     }
+
+    /// Find last chain arweave id.
+    pub fn find_last_chain_arweave(
+        self,
+        conn: &mut PgConnection,
+    ) -> Result<Option<String>, Error> {
+
+        if self.previous_id.is_none() {
+            return Ok(None);
+        }
+
+        let found: Option<KVChain> = kv_chains
+            .filter(id.eq(self.previous_id.unwrap()))
+            .get_result(conn)
+            .optional()?;
+
+        if let Some(kv_chain) = found {
+            Ok(kv_chain.arweave_id)
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 impl KVChain {
@@ -175,7 +200,67 @@ impl KVChain {
         let (kv_record, _is_new) =
             kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
         kv_record.patch(conn, &self.patch)?;
-
+        
         Ok(kv_record)
     }
+
+    /// Insert arweave id into kv and kv_chains.
+    pub fn insert_arweave_id(&self, conn: &mut PgConnection, new_arweave: Option<String>) -> Result<(), Error> {
+        
+        use crate::model::kv;
+        
+        // insert arweave id into table kv
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::from_pubkey_vec(&self.persona)?;
+
+        let (kv_record, _is_new) =
+            kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
+        kv_record.update_arweave(conn, new_arweave.clone())?;
+        
+        // insert arweave id into table kv_chains
+        diesel::update(self)
+            .set(arweave_id.eq(new_arweave))
+            .execute(conn)
+            .map_err(|e| Error::from(e))?;
+
+        Ok(())
+    }
+}
+
+
+/// Returns (KVChain, is_founded)
+pub fn find_kv_chain_by_id(
+    conn: &mut PgConnection,
+    other_id: i32,
+) -> Result<(KVChain, bool), Error> {
+
+    let found = kv_chains
+        .filter(id.eq(other_id))
+        .first(conn)
+        .optional()?;
+
+    // Found
+    if found.is_some() {
+        return Ok((found.unwrap(), true));
+    } 
+    
+    // Not found
+    Ok((found.unwrap(), false))
+}
+
+/// Find all KVChains belongs to given platform-identity pair.
+pub fn find_all_by_identity(
+    conn: &mut PgConnection,
+    platform_given: &str,
+    identity_given: &str,
+) -> Result<Vec<KVChain>, Error> {
+
+    let result: Vec<KVChain> = kv_chains
+        .filter(platform.eq(platform_given))
+        .filter(identity.eq(identity_given))
+        .get_results(conn)?;
+
+    Ok(result)
 }

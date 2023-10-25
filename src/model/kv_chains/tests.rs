@@ -10,7 +10,7 @@ mod tests {
         error::Error,
         model::{
             establish_connection,
-            kv_chains::{KVChain, NewKVChain},
+            kv_chains::{KVChain, NewKVChain, find_kv_chain_by_id}, kv::find_all_by_persona,
         },
         schema::kv_chains::dsl::*,
         util::{naive_now, vec_to_base64},
@@ -24,7 +24,7 @@ mod tests {
         Ok(())
     }
 
-    fn generate_data(conn: &mut PgConnection, persona_pubkey: &PublicKey) -> Result<KVChain, Error> {
+    fn create_link_and_insert(conn: &mut PgConnection, persona_pubkey: &PublicKey, other_arweave_id: Option<String>) -> Result<KVChain, Error> {
         let new_uuid = ::uuid::Uuid::new_v4();
         let persona_bytes = persona_pubkey.serialize().to_vec();
         let new_platform: String = Faker.fake();
@@ -40,6 +40,7 @@ mod tests {
                 signature: vec![1],
                 signature_payload: "".into(),
                 created_at: naive_now(),
+                arweave_id: other_arweave_id,
             })
             .get_result(conn)
             .map_err(|e| e.into())
@@ -53,7 +54,7 @@ mod tests {
             public_key: pk,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&mut conn, &pk)?;
+        let link = create_link_and_insert(&mut conn, &pk, None)?;
 
         let found = KVChain::find_last_link(&mut conn, &pk)?.unwrap();
         assert_eq!(found.id, link.id);
@@ -69,7 +70,7 @@ mod tests {
             public_key: pk,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&mut conn, &pk)?;
+        let link = create_link_and_insert(&mut conn, &pk, None)?;
 
         let new_identity: String = Faker.fake();
         let new_kvchain = NewKVChain {
@@ -82,6 +83,7 @@ mod tests {
             signature: vec![2],
             signature_payload: "".into(),
             created_at: naive_now(),
+            arweave_id: None,
         };
         let new_link = new_kvchain.finalize(&mut conn)?;
         assert_eq!(new_link.previous_id.unwrap(), link.id);
@@ -98,7 +100,7 @@ mod tests {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&mut conn, &public_key)?;
+        let link = create_link_and_insert(&mut conn, &public_key, None)?;
 
         let new_kv = NewKVChain::for_persona(&mut conn, &public_key)?;
         assert_eq!(new_kv.persona, public_key.serialize().to_vec());
@@ -114,7 +116,7 @@ mod tests {
             public_key,
             secret_key: _,
         } = Secp256k1KeyPair::generate();
-        let link = generate_data(&mut conn, &public_key)?;
+        let link = create_link_and_insert(&mut conn, &public_key, None)?;
         let new_kv = NewKVChain::for_persona(&mut conn, &public_key)?;
 
         let sign_body = new_kv.generate_signature_payload()?;
@@ -128,7 +130,7 @@ mod tests {
         let mut conn = establish_connection();
         before_each(&mut conn)?;
         let keypair = Secp256k1KeyPair::generate();
-        generate_data(&mut conn, &keypair.public_key)?;
+        create_link_and_insert(&mut conn, &keypair.public_key, None)?;
         let mut new_kv = NewKVChain::for_persona(&mut conn, &keypair.public_key)?;
         new_kv.platform = "facebook".into();
         new_kv.identity = Faker.fake();
@@ -140,6 +142,62 @@ mod tests {
             serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
         assert!(new_kv.validate().is_ok());
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_insert_arweave_id() -> Result<(), Error> {
+        let mut conn = establish_connection();
+        before_each(&mut conn)?;
+        let Secp256k1KeyPair {
+            public_key,
+            secret_key: _,
+        } = Secp256k1KeyPair::generate();
+        let insert_arweave_id = Some(String::from("xahZGuFbiayYiIuEG4dSpMS3XWcNH02vAXYGt4t2WFA"));
+
+        let link = create_link_and_insert(&mut conn, &public_key, None)?;
+        assert_eq!(link.arweave_id, None);
+        
+        // check it whether insert arweave id into kv_chains table
+        let _ = link.insert_arweave_id(&mut conn, insert_arweave_id.clone());
+        let (find_link, is_found) = find_kv_chain_by_id(&mut conn, link.id)?;
+        assert!(is_found);
+        assert_eq!(find_link.arweave_id, insert_arweave_id);
+
+        // check it whether insert arweave id into kv table
+        let kvs = find_all_by_persona(&mut conn, &public_key)?;
+        assert_eq!(kvs.len(), 1);
+        assert_eq!(kvs[0].arweave_id, insert_arweave_id);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_last_chain_arweave() -> Result<(), Error> {
+        let mut conn = establish_connection();
+        before_each(&mut conn)?;
+        let Secp256k1KeyPair {
+            public_key: pk,
+            secret_key: _,
+        } = Secp256k1KeyPair::generate();
+        let first_link = create_link_and_insert(&mut conn, &pk, Some("first".into()))?;
+
+        let new_identity: String = Faker.fake();
+        let second_link = NewKVChain {
+            uuid: ::uuid::Uuid::new_v4(),
+            persona: pk.serialize().to_vec(),
+            platform: "facebook".into(),
+            identity: new_identity.clone(),
+            patch: json!({"test": "def"}),
+            previous_id: Some(first_link.id),
+            signature: vec![2],
+            signature_payload: "".into(),
+            created_at: naive_now(),
+            arweave_id: Some("second".into()),
+        };
+
+        let found_arweave_id = second_link.find_last_chain_arweave(&mut conn)?;
+        assert_eq!(found_arweave_id, Some("first".into()));
         Ok(())
     }
 }

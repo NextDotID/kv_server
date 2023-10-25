@@ -23,6 +23,7 @@ pub struct QueryResponseSingleProof {
     pub platform: String,
     pub identity: String,
     pub content: serde_json::Value,
+    pub arweave_id: Option<String>,
 }
 
 pub async fn controller(req: Request) -> Result<Response, Error> {
@@ -59,6 +60,7 @@ pub fn query_response(
             platform: proof.platform,
             identity: proof.identity,
             content: proof.content,
+            arweave_id: proof.arweave_id,
         };
         response.proofs.push(proof_single);
     }

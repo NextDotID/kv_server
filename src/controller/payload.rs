@@ -85,6 +85,7 @@ mod tests {
                 signature: vec![1],
                 signature_payload: "".into(),
                 created_at: naive_now(),
+                arweave_id: None,
             })
             .get_result(conn)
             .map_err(|e| e.into())

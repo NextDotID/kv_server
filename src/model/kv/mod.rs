@@ -20,6 +20,7 @@ pub struct KV {
     pub persona: Vec<u8>,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
+    pub arweave_id: Option<String>,
 }
 
 #[derive(Insertable, Debug)]
@@ -38,6 +39,15 @@ impl KV {
 
         diesel::update(self)
             .set(content.eq(patched_content))
+            .execute(conn)
+            .map_err(|e| Error::from(e))?;
+        Ok(())
+    }
+
+    /// Update arweave_id field into newest.
+    pub fn update_arweave(&self, conn: &mut PgConnection, new_arweave: Option<String>) -> Result<(), Error> {
+        diesel::update(self)
+            .set(arweave_id.eq(new_arweave))
             .execute(conn)
             .map_err(|e| Error::from(e))?;
         Ok(())
