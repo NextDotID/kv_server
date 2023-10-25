@@ -27,7 +27,7 @@ pub struct KVConfig {
     pub db: ConfigDB,
     pub web: ConfigWeb,
     pub proof_service: ConfigProofService,
-    pub arweave: ConfigArwave,
+    pub arweave: Option<ConfigArwave>,
 }
 
 #[derive(Clone, Deserialize, Default)]

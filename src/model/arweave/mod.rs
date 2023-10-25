@@ -24,25 +24,30 @@ pub struct KVChainArweaveDocument {
     pub created_at: NaiveDateTime,
     pub signature_payload: String,
     pub previous_id: Option<i32>,
-    pub previous_arweave_id: Option<String>, 
-}    
+    pub previous_arweave_id: Option<String>,
+}
 
 impl KVChainArweaveDocument {
-
+    // If arweave configuration is missing, returns Ok("".to_string())
     pub async fn upload_to_arweave(self) -> Result<String, Error> {
+        // Arweave configuration is not set. Return empty string
+        if C.arweave.is_none() {
+            return Ok("".into())
+        }
+        let arweave_config = C.arweave.clone().unwrap();
 
         // create the signer
-        let arweave_url = Url::parse(C.arweave.url.as_str())?;
-        let arweave_connect = Arweave::from_keypair_path(
-            PathBuf::from(C.arweave.jwt.as_str()),
+        let arweave_url = Url::parse(&arweave_config.url)?;
+        let client = Arweave::from_keypair_path(
+            PathBuf::from(&arweave_config.jwt),
             arweave_url.clone()
         )?;
-        
+
         let target = Base64(vec![]);
         let data = serde_json::to_vec(&self)?;
         // query the fee of upload and create the transaction
-        let fee = arweave_connect.get_fee(target.clone(), data.clone()).await?;
-        let send_transaction = arweave_connect.create_transaction(
+        let fee = client.get_fee(target.clone(), data.clone()).await?;
+        let send_transaction = client.create_transaction(
             target,
             vec![],
             data,
@@ -50,13 +55,11 @@ impl KVChainArweaveDocument {
             fee,
             true
         ).await?;
-        
-        let signed_transaction = arweave_connect.sign_transaction(send_transaction)?;
-        let result = arweave_connect.post_transaction(&signed_transaction).await?;
-        
+
+        let signed_transaction = client.sign_transaction(send_transaction)?;
+        let result = client.post_transaction(&signed_transaction).await?;
+
         // return the transcation id to user
         Ok(result.0)
     }
-
 }
-

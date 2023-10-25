@@ -47,7 +47,7 @@ for Rust.
           + platform (string, required) - Platform (incl. `nextid`, which means public key itself).
           + identity (string, required) - Identity.
           + content (object, required) - KV-pair of this entry.
-          + arweave_id (object, required) - The id of record on the arweave.
+          + arweave_id (string, required) - The id of record on the arweave.
 
   + Body
 
@@ -204,5 +204,5 @@ Avatar not found (no KV was ever created).
 Created successfully. Response is same as `GET /v1/kv`.
 
 Note:
-that since it takes some time for arweave to upload the data, 
+that since it takes some time for arweave to upload the data,
 so `arweave_id` may be empty in the returned response.

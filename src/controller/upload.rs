@@ -71,18 +71,14 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     // Apply patch
     kv_link.perform_patch(&mut conn)?;
 
-    // // Upload to arweave
-    // tokio::spawn(async move {
-    //     let result = arweave_document.upload_to_arweave().await.ok();
-    //     let _ = kv_link.insert_arweave_id(&mut conn, result);
-    // });
-
+    // Upload to arweave
+    // TODO: should make it as a background job
     let result = arweave_document.upload_to_arweave().await.ok();
     let _ = kv_link.insert_arweave_id(&mut conn, result);
-    
+
     // All done. Build response.
     let response = query_response(&mut conn, &persona.public_key)?;
-    
+
     json_response(StatusCode::CREATED, &response)
 }
 
@@ -125,7 +121,7 @@ mod tests {
 
         serde_json::from_str(resp.body()).unwrap()
     }
-    
+
     fn create_new_kv_chain(persona: PublicKey, platform: &String, identity: &String, patch: Value) -> NewKVChain {
         NewKVChain {
             uuid: uuid::Uuid::new_v4(),
@@ -223,7 +219,7 @@ mod tests {
         let resp_body = create_req_and_send(first_kv_chain.clone(), keypair.public_key).await;
         assert_eq!(1, resp_body.proofs.len());
         let primitive_arweave_id_in_kv = resp_body.proofs.first().unwrap().arweave_id.clone();
-        
+
         let mut second_kv_chain = create_new_kv_chain(
             keypair.public_key, &platform, &identity, json!({"second": "second"}));
         let last_link = KVChain::find_last_link(&mut conn, &keypair.public_key).unwrap();

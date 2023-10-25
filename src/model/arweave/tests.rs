@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use std::{path::PathBuf, str::FromStr}; 
+    use std::{path::PathBuf, str::FromStr};
 
     use arweave_rs::{Arweave, crypto::base64::Base64, network::NetworkInfoClient};
     use url::Url;
@@ -31,7 +31,11 @@ mod tests {
     /// We will test current network is work or not
     #[tokio::test]
     async fn test_network_work() {
-        let arweave_url = Url::parse(C.arweave.url.as_str()).unwrap();
+        if C.arweave.is_none() {
+            return;
+        }
+        let arweave_config = C.arweave.clone().unwrap();
+        let arweave_url = Url::parse(&arweave_config.url).unwrap();
         let network_client = NetworkInfoClient::new(arweave_url);
         let _ = match network_client.network_info().await {
             Ok(message) => message,
@@ -42,12 +46,16 @@ mod tests {
     /// Check the upload function and status of upload.
     #[tokio::test]
     async fn test_send_data_to_arweave_and_check() {
+        if C.arweave.is_none() {
+            return;
+        }
+        let arweave_config = C.arweave.clone().unwrap();
         let test_document = prepare_test_document();
         let transcation_id = test_document.upload_to_arweave().await.unwrap();
-        
-        let arweave_url = Url::parse(C.arweave.url.as_str()).unwrap();
+
+        let arweave_url = Url::parse(&arweave_config.url).unwrap();
         let arweave_connect = Arweave::from_keypair_path(
-            PathBuf::from(C.arweave.jwt.as_str()),
+            PathBuf::from(&arweave_config.jwt),
             arweave_url.clone()
         ).unwrap();
 
