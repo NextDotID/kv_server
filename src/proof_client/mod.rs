@@ -39,6 +39,22 @@ pub struct ProofQueryResponsePagination {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct SubkeyQueryResponse {
+    pub subkeys: Vec<SubkeyQueryResponseSingle>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct SubkeyQueryResponseSingle {
+    pub avatar: String,
+    pub algorithm: String,
+    pub public_key: String,
+    pub name: String,
+    #[serde(rename = "RP_ID")]
+    pub rp_id: String,
+    pub created_at: u32,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct ErrorResponse {
     pub message: String,
 }
@@ -64,7 +80,7 @@ where
 }
 
 /// Persona should be 33-bytes hexstring (`0x[0-9a-f]{66}`)
-pub async fn query(base: &str, persona: &str) -> Result<ProofQueryResponse, Error> {
+pub async fn query_avatar(base: &str, persona: &str) -> Result<ProofQueryResponse, Error> {
     let client = make_client();
     let uri = format!("{}/v1/proof?platform=nextid&identity={}", base, persona)
         .parse()
@@ -81,22 +97,69 @@ pub async fn query(base: &str, persona: &str) -> Result<ProofQueryResponse, Erro
     Ok(body)
 }
 
+pub async fn query_subkey(
+    base: &str,
+    algorithm: &str,
+    public_key: &str
+) -> Result<SubkeyQueryResponse, Error>{
+    let client = make_client();
+    let uri = format!("{}/v1/subkey?algorithm={}&public_key={}", base, algorithm, public_key)
+        .parse()
+        .unwrap();
+    let mut resp = client.get(uri).await?;
+    if !resp.status().is_success() {
+        let body: ErrorResponse = parse_body(&mut resp).await?;
+        return Err(Error::General(
+            format!("ProofService error: {}", body.message),
+            resp.status(),
+        ));
+    }
+
+    parse_body(&mut resp).await.map_err(|e| e.into())
+}
+
+/// Determine if given subkey exists on ProofService.  Returns the binded avatar public key.
+pub async fn query_subkey(
+    algorithm: &str,
+    public_key: &str,
+) -> Result<SubkeyQueryResponseSingle, Error> {
+    let query_result = query_subkey(
+        &crate::config::C.proof_service.url,
+        algorithm,
+        public_key
+    ).await?;
+    if query_result.subkeys.len() == 0 {
+        return Err(Error::General(
+            "Subkey not found on ProofService".into(),
+            StatusCode::BAD_REQUEST,
+        ));
+    };
+    let subkey_found = query_result.subkeys
+        .iter()
+        .find(|&sk| sk.public_key == public_key && sk.algorithm == algorithm)
+        .ok_or(Error::General(
+            "Subkey not found on ProofService".into(),
+            StatusCode::BAD_REQUEST,
+        ))?;
+    Ok(subkey_found.clone())
+}
+
 /// Determine if persona-platform-identity pair can set a KV.
 pub async fn can_set_kv(
     persona_pubkey: &PublicKey,
-    platform: &String,
-    identity: &String,
+    platform: &str,
+    identity: &str,
 ) -> Result<(), Error> {
     // FIXME: super stupid test stub
     if cfg!(test) {
         return Ok(());
     }
     // KV of NextID: validate if identity == persona.
-    if *platform == "nextid".to_string() {
+    if platform == "nextid" {
         let Secp256k1KeyPair {
             public_key: identity_pubkey,
             secret_key: _,
-        } = Secp256k1KeyPair::from_pubkey_hex(&identity)?;
+        } = Secp256k1KeyPair::from_pubkey_hex(identity)?;
         if identity_pubkey == *persona_pubkey {
             return Ok(());
         } else {
@@ -110,7 +173,7 @@ pub async fn can_set_kv(
     let persona_compressed_hex =
         format!("0x{}", hex::encode(persona_pubkey.serialize_compressed()));
     let query_response =
-        query(&crate::config::C.proof_service.url, &persona_compressed_hex).await?;
+        query_avatar(&crate::config::C.proof_service.url, &persona_compressed_hex).await?;
     if query_response.ids.len() == 0 {
         return Err(Error::General(
             format!(

@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::{error::Error, proof_client::query};
+    use crate::{error::Error, proof_client::query_avatar};
     const PROOF_SERVICE_URL: &str = "https://proof-service.nextnext.id"; // Staging
 
     #[tokio::test]
     async fn test_smoke() -> Result<(), Error> {
-        let result = query(
+        let result = query_avatar(
             PROOF_SERVICE_URL,
             "0x000000000000000000000000000000000000000000000000000000000000000000",
         )
