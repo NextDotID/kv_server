@@ -44,7 +44,7 @@ pub struct NewKVChain {
     pub signature: Vec<u8>,
     pub signature_payload: String,
     pub created_at: NaiveDateTime,
-    pub arweave_id: Option<String>, 
+    pub arweave_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -114,6 +114,11 @@ impl NewKVChain {
             previous: previous_sig,
             created_at: self.created_at.timestamp(),
         })
+    }
+
+    /// Generate a signature body which should be signed with Subkey.
+    pub fn generate_subkey_signature_payload(&self) -> Result<SignPayload, Error>{
+        todo!()
     }
 
     /// Generate a signature using given keypair.
@@ -200,15 +205,15 @@ impl KVChain {
         let (kv_record, _is_new) =
             kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
         kv_record.patch(conn, &self.patch)?;
-        
+
         Ok(kv_record)
     }
 
     /// Insert arweave id into kv and kv_chains.
     pub fn insert_arweave_id(&self, conn: &mut PgConnection, new_arweave: Option<String>) -> Result<(), Error> {
-        
+
         use crate::model::kv;
-        
+
         // insert arweave id into table kv
         let Secp256k1KeyPair {
             public_key,
@@ -218,7 +223,7 @@ impl KVChain {
         let (kv_record, _is_new) =
             kv::find_or_create(conn, &self.platform, &self.identity, &public_key)?;
         kv_record.update_arweave(conn, new_arweave.clone())?;
-        
+
         // insert arweave id into table kv_chains
         diesel::update(self)
             .set(arweave_id.eq(new_arweave))
@@ -244,8 +249,8 @@ pub fn find_kv_chain_by_id(
     // Found
     if found.is_some() {
         return Ok((found.unwrap(), true));
-    } 
-    
+    }
+
     // Not found
     Ok((found.unwrap(), false))
 }

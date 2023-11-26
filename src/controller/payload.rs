@@ -3,15 +3,18 @@ use crate::{
     crypto::secp256k1::Secp256k1KeyPair,
     error::Error,
     model::{establish_connection, kv_chains::NewKVChain},
-    proof_client::can_set_kv,
+    proof_client::{can_set_kv, self},
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 
+use super::error_response;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PayloadRequest {
-    pub persona: Option<String>,
     pub avatar: Option<String>,
+    pub algorithm: Option<crate::types::subkey::Algorithm>,
+    pub public_key: Option<String>,
     pub platform: String,
     pub identity: String,
     pub patch: serde_json::Value,
@@ -26,20 +29,50 @@ struct PayloadResponse {
 
 pub async fn controller(req: Request) -> Result<Response, Error> {
     let params: PayloadRequest = json_parse_body(&req)?;
+    if params.avatar.is_some() {
+        sign_payload_with_avatar(&params).await
+    } else if params.algorithm.is_some() && params.public_key.is_some() {
+        sign_payload_with_subkey(&params).await
+    } else {
+        Ok(error_response(
+            Error::ParamError("(avatar) or (algorithm, public_key) is not provided".into())
+        ))
+    }
+}
 
-    let keypair = Secp256k1KeyPair::from_pubkey_hex(
-        &params
-            .avatar
-            .or(params.persona)
-            .ok_or_else(|| Error::ParamError("avatar not found".into()))?,
-    )?;
+async fn sign_payload_with_avatar(params: &PayloadRequest) -> Result<Response, Error> {
+    let keypair = Secp256k1KeyPair::from_pubkey_hex(params.avatar.as_ref().unwrap())?;
     can_set_kv(&keypair.public_key, &params.platform, &params.identity).await?;
     let mut conn = establish_connection();
     let mut new_kvchain = NewKVChain::for_persona(&mut conn, &keypair.public_key)?;
 
-    new_kvchain.platform = params.platform;
-    new_kvchain.identity = params.identity;
-    new_kvchain.patch = params.patch;
+    new_kvchain.platform = params.platform.clone();
+    new_kvchain.identity = params.identity.clone();
+    new_kvchain.patch = params.patch.clone();
+    let sign_payload = new_kvchain.generate_signature_payload()?;
+
+    Ok(json_response(
+        StatusCode::OK,
+        &PayloadResponse {
+            sign_payload: serde_json::to_string(&sign_payload)?,
+            uuid: sign_payload.uuid.to_string(),
+            created_at: sign_payload.created_at,
+        },
+    )?)
+}
+
+async fn sign_payload_with_subkey(params: &PayloadRequest) -> Result<Response, Error> {
+    let algorithm = params.algorithm.as_ref().unwrap();
+    let public_key = params.public_key.as_ref().unwrap();
+    let subkey = proof_client::find_subkey(&algorithm, &public_key).await?;
+    let avatar = Secp256k1KeyPair::from_pubkey_hex(&subkey.avatar)?;
+    can_set_kv(&avatar.public_key, &params.platform, &params.identity).await?;
+
+    let mut conn = establish_connection();
+    let mut new_kvchain = NewKVChain::for_persona(&mut conn, &avatar.public_key)?;
+    new_kvchain.platform = params.platform.clone();
+    new_kvchain.identity = params.identity.clone();
+    new_kvchain.patch = params.patch.clone();
     let sign_payload = new_kvchain.generate_signature_payload()?;
 
     Ok(json_response(
@@ -99,8 +132,9 @@ mod tests {
         } = Secp256k1KeyPair::generate();
 
         let req_body = PayloadRequest {
-            persona: Some(compress_public_key(&public_key)),
-            avatar: None,
+            avatar: Some(compress_public_key(&public_key)),
+            algorithm: None,
+            public_key: None,
             platform: "facebook".into(),
             identity: Faker.fake(),
             patch: json!({"test":"abc"}),
@@ -131,8 +165,9 @@ mod tests {
         let old_kv_chain = generate_data(&mut conn, &public_key).unwrap();
 
         let req_body = PayloadRequest {
-            persona: None,
             avatar: Some(compress_public_key(&public_key)),
+            algorithm: None,
+            public_key: None,
             platform: "facebook".into(),
             identity: Faker.fake(),
             patch: json!({"test":"abc"}),

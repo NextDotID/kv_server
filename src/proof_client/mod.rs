@@ -1,6 +1,6 @@
 mod tests;
 
-use crate::{crypto::secp256k1::Secp256k1KeyPair, error::Error};
+use crate::{crypto::secp256k1::Secp256k1KeyPair, error::Error, types::subkey::Algorithm};
 use http::{Response, StatusCode};
 use hyper::{body::HttpBody as _, client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
@@ -46,7 +46,7 @@ pub struct SubkeyQueryResponse {
 #[derive(Deserialize, Debug, Clone)]
 pub struct SubkeyQueryResponseSingle {
     pub avatar: String,
-    pub algorithm: String,
+    pub algorithm: Algorithm,
     pub public_key: String,
     pub name: String,
     #[serde(rename = "RP_ID")]
@@ -59,7 +59,7 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
-pub fn make_client() -> Client<HttpsConnector<HttpConnector>> {
+fn make_client() -> Client<HttpsConnector<HttpConnector>> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
     client
@@ -80,7 +80,7 @@ where
 }
 
 /// Persona should be 33-bytes hexstring (`0x[0-9a-f]{66}`)
-pub async fn query_avatar(base: &str, persona: &str) -> Result<ProofQueryResponse, Error> {
+async fn query_avatar(base: &str, persona: &str) -> Result<ProofQueryResponse, Error> {
     let client = make_client();
     let uri = format!("{}/v1/proof?platform=nextid&identity={}", base, persona)
         .parse()
@@ -97,15 +97,20 @@ pub async fn query_avatar(base: &str, persona: &str) -> Result<ProofQueryRespons
     Ok(body)
 }
 
-pub async fn query_subkey(
+async fn query_subkey(
     base: &str,
-    algorithm: &str,
-    public_key: &str
-) -> Result<SubkeyQueryResponse, Error>{
+    algorithm: &Algorithm,
+    public_key: &str,
+) -> Result<SubkeyQueryResponse, Error> {
     let client = make_client();
-    let uri = format!("{}/v1/subkey?algorithm={}&public_key={}", base, algorithm, public_key)
-        .parse()
-        .unwrap();
+    let uri = format!(
+        "{}/v1/subkey?algorithm={}&public_key={}",
+        base,
+        algorithm.to_string(),
+        public_key
+    )
+    .parse()
+    .unwrap();
     let mut resp = client.get(uri).await?;
     if !resp.status().is_success() {
         let body: ErrorResponse = parse_body(&mut resp).await?;
@@ -119,24 +124,22 @@ pub async fn query_subkey(
 }
 
 /// Determine if given subkey exists on ProofService.  Returns the binded avatar public key.
-pub async fn query_subkey(
-    algorithm: &str,
+pub async fn find_subkey(
+    algorithm: &Algorithm,
     public_key: &str,
 ) -> Result<SubkeyQueryResponseSingle, Error> {
-    let query_result = query_subkey(
-        &crate::config::C.proof_service.url,
-        algorithm,
-        public_key
-    ).await?;
+    let query_result =
+        query_subkey(&crate::config::C.proof_service.url, &algorithm, public_key).await?;
     if query_result.subkeys.len() == 0 {
         return Err(Error::General(
             "Subkey not found on ProofService".into(),
             StatusCode::BAD_REQUEST,
         ));
     };
-    let subkey_found = query_result.subkeys
+    let subkey_found = query_result
+        .subkeys
         .iter()
-        .find(|&sk| sk.public_key == public_key && sk.algorithm == algorithm)
+        .find(|&sk| sk.public_key == public_key && sk.algorithm == *algorithm)
         .ok_or(Error::General(
             "Subkey not found on ProofService".into(),
             StatusCode::BAD_REQUEST,

@@ -1,4 +1,6 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     kv (id) {
         id -> Int4,
         uuid -> Nullable<Uuid>,
@@ -12,7 +14,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     kv_chains (id) {
         id -> Int4,
         uuid -> Uuid,
@@ -29,7 +31,7 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     kv,
     kv_chains,
 );

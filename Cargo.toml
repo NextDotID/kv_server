@@ -30,6 +30,8 @@ hyper-tls = "*"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+strum = "*"
+strum_macros = "*"
 json-patch = "*"
 
 # diesel `uuidv07` feature is bound tight with `uuid` v0.7.x
@@ -45,6 +47,10 @@ sha3 = "0.10" # Keccak256
 base64 = "0.13"
 hex = "0.4"
 hex-literal = "0.3"
+ecdsa = "*"
+p256 = "*"
+sha2 = "0.10.8"
+
 
 # arweave
 arweave-rs = "0.1.2"

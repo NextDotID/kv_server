@@ -15,7 +15,18 @@
       {
         # defaultPackage = naersk-lib.buildPackage ./.;
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [ cargo rustc rustfmt rust-analyzer pre-commit rustPackages.clippy pkg-config openssl postgresql ];
+          buildInputs = with pkgs; [
+            cargo
+            rustc
+            rustfmt
+            rust-analyzer
+            pre-commit
+            rustPackages.clippy
+            pkg-config
+            openssl
+            postgresql
+            diesel-cli
+          ];
           RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
         };
       });

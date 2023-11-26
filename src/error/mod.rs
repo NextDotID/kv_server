@@ -37,6 +37,10 @@ pub enum Error {
     UrlParseError(#[from] url::ParseError),
     #[error("arweave error: {0}")]
     ArweaveError(#[from] arweave_rs::error::Error),
+    #[error("P256 curve error: {0}")]
+    P256CurveError(#[from] p256::elliptic_curve::Error),
+    #[error("P256 ECDSA error: {0}")]
+    P256ECDSAError(#[from] p256::ecdsa::Error),
 }
 
 impl Error {
@@ -58,6 +62,9 @@ impl Error {
             Error::UuidParseError(_) => StatusCode::BAD_REQUEST,
             Error::UrlParseError(_) => StatusCode::BAD_REQUEST,
             Error::ArweaveError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::P256CurveError(_) => StatusCode::BAD_REQUEST,
+            Error::P256ECDSAError(_) => StatusCode::BAD_REQUEST,
+
         }
     }
 }

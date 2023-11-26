@@ -77,7 +77,6 @@ Response after calling `await navigator.credentials.get()` should be like:
 
     + Parameters
 
-        - persona (string, required) - Deprecated. Use `avatar` instead.
         - avatar (string, required) - Persona public key (hexstring started with `0x`).
 
     + Example
@@ -88,7 +87,6 @@ Response after calling `await navigator.credentials.get()` should be like:
 
   + Attributes (object)
 
-     + persona (string, required) - Deprecated. Use `avatar` instead.
      + avatar (string, required) - Avatar public key (uncompressed hexstring started with `0x`).
      + proofs (array[object], required) - All proofs belong to this persona
           + platform (string, required) - Platform (incl. `nextid`, which means public key itself).
