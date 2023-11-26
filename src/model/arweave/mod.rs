@@ -30,10 +30,6 @@ pub struct KVChainArweaveDocument {
 impl KVChainArweaveDocument {
     // If arweave configuration is missing, returns Ok("".to_string())
     pub async fn upload_to_arweave(self) -> Result<String, Error> {
-        // Arweave configuration is not set. Return empty string
-        if C.arweave.is_none() {
-            return Ok("".into())
-        }
         let arweave_config = C.arweave.clone().unwrap();
 
         // create the signer

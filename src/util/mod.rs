@@ -9,6 +9,11 @@ pub fn vec_to_base64(bytes_vec: &Vec<u8>) -> String {
     base64::encode(bytes_vec)
 }
 
+/// With `0x` prefix
+pub fn vec_to_hex(bytes_vec: &Vec<u8>) -> String {
+    format!("0x{}",  hex::encode(bytes_vec))
+}
+
 /// Returns current UNIX timestamp (unit: second).
 pub fn timestamp() -> i64 {
     naive_now().timestamp()

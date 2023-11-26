@@ -1,19 +1,22 @@
-use super::{json_response, query::query_response};
+use super::{json_response, query::query_response, error_response};
 use crate::{
     controller::{json_parse_body, Request, Response},
     crypto::secp256k1::Secp256k1KeyPair,
     error::Error,
-    model::{self, kv_chains::NewKVChain, arweave::KVChainArweaveDocument},
-    proof_client::can_set_kv,
-    util::{base64_to_vec, timestamp_to_naive},
+    model::{self, kv_chains::{NewKVChain, KVChain}, arweave::KVChainArweaveDocument},
+    proof_client::{can_set_kv, find_subkey},
+    util::{base64_to_vec, timestamp_to_naive, vec_to_hex},
 };
+use diesel::PgConnection;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct UploadRequest {
-    pub persona: Option<String>,
     pub avatar: Option<String>,
+    pub algorithm: Option<crate::types::subkey::Algorithm>,
+    pub public_key: Option<String>,
+
     pub platform: String,
     pub identity: String,
     pub signature: String,
@@ -24,18 +27,27 @@ struct UploadRequest {
 
 pub async fn controller(request: Request) -> Result<Response, Error> {
     let req: UploadRequest = json_parse_body(&request)?;
+
+    if req.avatar.is_some() {
+        create_with_avatar(req).await
+    } else if req.algorithm.is_some() && req.public_key.is_some() {
+        create_with_subkey(req).await
+    } else {
+        Ok(error_response(
+            Error::ParamError("(avatar) or (algorithm, public_key) is not provided".into())
+        ))
+    }
+}
+
+async fn create_with_avatar(req: UploadRequest) -> Result<Response, Error> {
     let sig = base64_to_vec(&req.signature)?;
-    let avatar = req.avatar.clone();
-    let persona = Secp256k1KeyPair::from_pubkey_hex(
-        &req.avatar
-            .or(req.persona)
-            .ok_or_else(|| Error::ParamError("avatar not found".into()))?,
-    )?;
     let uuid = uuid::Uuid::parse_str(&req.uuid)?;
-    can_set_kv(&persona.public_key, &req.platform, &req.identity).await?;
+
+    let avatar = Secp256k1KeyPair::from_pubkey_hex(&req.avatar.unwrap())?;
+    can_set_kv(&avatar.public_key, &req.platform, &req.identity).await?;
 
     let mut conn = model::establish_connection();
-    let mut new_kv = NewKVChain::for_persona(&mut conn, &persona.public_key)?;
+    let mut new_kv = NewKVChain::for_persona(&mut conn, &avatar.public_key)?;
     new_kv.platform = req.platform;
     new_kv.identity = req.identity;
     new_kv.signature = sig;
@@ -45,42 +57,83 @@ pub async fn controller(request: Request) -> Result<Response, Error> {
     new_kv.signature_payload =
         serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
 
-    // Validate signature
     new_kv.validate()?;
+    let kv_link = new_kv.finalize(&mut conn)?;
+    // Apply patch
+    kv_link.perform_patch(&mut conn)?;
 
-    let previous_arweave_id = new_kv.clone().find_last_chain_arweave(&mut conn)?;
+    upload_to_arweave(&new_kv, &kv_link, &mut conn).await?;
+
+    // All done. Build response.
+    let response = query_response(&mut conn, &avatar.public_key)?;
+
+    json_response(StatusCode::CREATED, &response)
+}
+
+async fn create_with_subkey(req: UploadRequest) -> Result<Response, Error> {
+    let sig = base64_to_vec(&req.signature)?;
+    let uuid = uuid::Uuid::parse_str(&req.uuid)?;
+    let algo = req.algorithm.unwrap();
+    let pk = req.public_key.unwrap();
+    let subkey = find_subkey(&algo, &pk).await?;
+
+    let mut conn = model::establish_connection();
+    let avatar = Secp256k1KeyPair::from_pubkey_hex(&subkey.avatar)?;
+    let mut new_kv = NewKVChain::for_persona(&mut conn, &avatar.public_key)?;
+    new_kv.platform = req.platform;
+    new_kv.identity = req.identity;
+    new_kv.signature = sig;
+    new_kv.patch = req.patch.clone();
+    new_kv.uuid = uuid;
+    new_kv.created_at = timestamp_to_naive(req.created_at);
+    new_kv.signature_payload =
+        serde_json::to_string(&new_kv.generate_signature_payload()?).unwrap();
+
+    algo.verify(&pk, &new_kv.signature_payload, &req.signature)?;
+    let kv_link = new_kv.finalize(&mut conn)?;
+    // Apply patch
+    kv_link.perform_patch(&mut conn)?;
+
+    upload_to_arweave(&new_kv, &kv_link, &mut conn).await?;
+
+    // All done. Build response.
+    let response = query_response(&mut conn, &avatar.public_key)?;
+
+    json_response(StatusCode::CREATED, &response)
+}
+
+async fn upload_to_arweave(new_kv: &NewKVChain, kv: &KVChain, conn: &mut PgConnection) -> Result<(), Error> {
+    // Arweave configuration is not set. Return empty string
+    if crate::config::C.arweave.is_none() {
+        log::info!("Arweave is not configured. Skipped uploading.");
+        return Ok(())
+    }
+
+    let previous_arweave_id = new_kv.find_last_chain_arweave(conn)?;
 
     // Try take the kvchain data upload to the arweave.
     let arweave_document = KVChainArweaveDocument{
-        avatar: avatar.unwrap_or("".into()),
-        uuid,
+        avatar: vec_to_hex(&kv.persona),
+        uuid: kv.uuid,
         persona: vec![],
-        platform: new_kv.platform.clone(),
-        identity: new_kv.identity.clone(),
-        patch: new_kv.patch.clone(),
-        signature: new_kv.signature.clone(),
-        created_at: new_kv.created_at,
-        signature_payload: new_kv.signature_payload.clone(),
-        previous_id: new_kv.previous_id.clone(),
+        platform: kv.platform.clone(),
+        identity: kv.identity.clone(),
+        patch: kv.patch.clone(),
+        signature: kv.signature.clone(),
+        created_at: kv.created_at,
+        signature_payload: kv.signature_payload.clone(),
+        previous_id: kv.previous_id.clone(),
         previous_arweave_id: previous_arweave_id.clone(),
     };
-
-    // Valid. Insert it.
-    let kv_link = new_kv.finalize(&mut conn)?;
-
-    // Apply patch
-    kv_link.perform_patch(&mut conn)?;
 
     // Upload to arweave
     // TODO: should make it as a background job
     let result = arweave_document.upload_to_arweave().await.ok();
-    let _ = kv_link.insert_arweave_id(&mut conn, result);
+    let _ = kv.insert_arweave_id(conn, result);
 
-    // All done. Build response.
-    let response = query_response(&mut conn, &persona.public_key)?;
-
-    json_response(StatusCode::CREATED, &response)
+    Ok(())
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -100,8 +153,9 @@ mod tests {
     /// And then return the response body.
     async fn create_req_and_send(new_kv_chain: NewKVChain, public_key: PublicKey) -> QueryResponse {
         let req_body = UploadRequest {
-            persona: Some(compress_public_key(&public_key)),
             avatar: Some(compress_public_key(&public_key)),
+            algorithm: None,
+            public_key: None,
             platform: new_kv_chain.platform.clone(),
             identity: new_kv_chain.identity,
             signature: vec_to_base64(&new_kv_chain.signature),

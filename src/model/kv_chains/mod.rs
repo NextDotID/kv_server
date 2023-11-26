@@ -156,7 +156,7 @@ impl NewKVChain {
 
     /// Find last chain arweave id.
     pub fn find_last_chain_arweave(
-        self,
+        &self,
         conn: &mut PgConnection,
     ) -> Result<Option<String>, Error> {
 
